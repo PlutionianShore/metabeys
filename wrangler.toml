@@ -1,0 +1,6 @@
+name = "metabeys" 
+compatibility_date = "2026-01-01" 
+[[d1_databases]] 
+binding = "DB" 
+database_name = "beyblade-combos" 
+database_id = "7cbf8efd-d467-4025-9bca-dabf215e029a"
