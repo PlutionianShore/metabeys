@@ -1,7 +1,8 @@
 import * as cheerio from 'cheerio';
 
 const KNOWN_FUSED_BITS = ['Operate', 'Turbo'];
-const METAL_CHIPS = ['Emperor', 'Valkyrie']
+const METAL_CHIPS = ['Emperor', 'Valkyrie'];
+const PART_TYPES = ['Lock Chip', 'Main Blade', 'Over Blade', 'Assist Blade', 'Ratchet', 'Bit'];
 
 export default {
     async fetch(request, env, ctx) {
@@ -15,6 +16,47 @@ export default {
     }
 };
 
+function parsePost($, el) {
+    //turn <br> and <hr> into /n and ---
+    let inner = $.html(el)
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<hr[^>]*>/gi, '\n---\n');
+
+    //strip tags
+    const rawText = cheerio.load(inner).root().text();
+
+    //split into lines
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l && l !== '---');
+
+    const post = { eventName: lines[0], meta: {}, placements: [] };
+    const placementRegex = /^(\d+)(st|nd|rd|th)\s+(.+)$/i;
+    let current = null;
+
+    //sorting every line
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        const placementMatch = line.match(placementRegex);
+
+        if (placementMatch) {
+            //playernamde block
+            current = { combos: [] };
+            post.placements.push(current);
+            continue;
+        }
+
+        if (current) {
+            //pull combo out of placement block
+            const comboMatch = line.match(/^(.+?)\s*\([^)]+\)$/);
+            if (comboMatch) current.combos.push({ raw: comboMatch[1].trim() });
+        } else {
+            //if in header still.
+            const [key, ...rest] = line.split(':');
+            if (rest.length) post.meta[key.trim()] = rest.join(':').trim();
+        }
+    }
+
+    return post;
+}
 
 async function handleSubmit(request, env) {
     /*
@@ -22,67 +64,54 @@ async function handleSubmit(request, env) {
         when finished should write to DB as well
     */
     try {
-        //get raw html, load int cheerio, set up array for parsing
+        //get raw html, load int cheerio
         const html = await request.text();
         const $ = cheerio.load(html);
-        const results = [];
 
-        //get post boddies from forum.
-        $('.post_body').each((index, element) => {
-            const postId = $(element).attr('id');
+        //Loop through every post on the page
+        for (const el of $('.post_body').toArray()) {
+            const post = parsePost($, el);
+            const eventDate = post.meta['Date'];
 
-            //convert the weird dividers into \n or ---
-            let inner = $.html(element)
-                .replace(/<br\s*\/?>/gi, '\n')
-                .replace(/<\/?[^>]+(>|$)/g, '\n---\n').trim();
+            //Loop through every combo
+            for (const placement of post.placements) {
+                for (const comboLine of placement.combos) {
+                    try {const parsed = parseCombo(comboLine.raw);
+                        if (parsed.unparsed) continue; //skip things that are formatted weird
 
-            //get raw text without tags, split lines + trim
-            const rawText = inner.replace(/\n+/g, ' ').trim();
-            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l && l !== '---');
+                        const blade = await getOrClassifyBlade(env, parsed.bladeToken, parsed.isCX, parsed.bladeParts);
 
-            //post object
-            const post = {
-                id: postId,
-                eventName: lines[0],
-                meta: {},
-                placements: []
-            };
+                        //Insert the combo row
+                        const insert = await env.DB.prepare(
+                        `INSERT INTO combos (blade_id, posted_at, event_name, raw_text) VALUES (?, ?, ?, ?)`
+                        ).bind(blade.id, eventDate, post.eventName, comboLine.raw).run();
+                        const comboId = insert.meta.last_row_id;
 
-            const placementRegex = /^(\d+)(st|nd|rd|th)\s+(.+)$/i;
-            let current = null;
+                        //Build the list of parts used incombo
+                        const partsUsed = [];
+                        if (blade.is_cx) {
+                            partsUsed.push([`${blade.chip_category} Lock Chip`, 'Lock Chip']);
+                            partsUsed.push([blade.main_name, 'Main Blade']);
+                        if (parsed.bladeParts.length === 2) partsUsed.push([parsed.bladeParts[0], 'Over Blade']);
+                            partsUsed.push([parsed.bladeParts[parsed.bladeParts.length - 1], 'Assist Blade']);
+                        }
+                        if (parsed.ratchet) partsUsed.push([parsed.ratchet, 'Ratchet']);
+                            partsUsed.push([parsed.bit, 'Bit']);
 
-            for (let i2 = 1; i2 < lines.length; i2++) {
-                const line = lines[i2].trim();
-                const placementMatch = line.match(placementRegex);
-                
-                if (placementMatch) {
-                    //new entry for player placement + move on
-                    current = {
-                        placement: parseInt(placementMatch[1]), 
-                        player: placementMatch[3].trim(), 
-                        combos: []
-                    };
-                    post.placements.push(current);
-                    continue;
-                }
-
-                if (current) {
-                    //grab combos from current player placement
-                    const comboMatch = line.match(/^(.+?)\s*\(([^)]+)\)$/);
-                    if (comboMatch) {
-                        current.combos.push(parseComboString(comboMatch[1].trim(), comboMatch[2].trim()));
+                        //Link every part to this combo
+                        for (const [name, type] of partsUsed) {
+                            const partId = await getOrCreatePart(env, name, type);
+                            await env.DB.prepare(`INSERT INTO combo_parts (combo_id, part_id) VALUES (?, ?)`).bind(comboId, partId).run();
+                        }
                     }
-                } else {
-                    const [key, ...rest] = line.split(':');
-                    if (rest.length) post.meta[key.trim()] = rest.join(':').trim();
+                    catch (error) {
+                        console.error(`Failed on combo: "${comboLine.raw}" — ${error.message}`);
+                    }
                 }
             }
+        }
 
-            results.push(post);
-        });
-        
-        //send back JSON
-        return new Response(JSON.stringify(results, null, 2), {headers: { "Content-Type": "application/json" }});
+        return new Response("Inserted successfully");
     } catch (error) {
         return new Response(`Error processing request: ${error.message}`, { status: 500 });
     }
@@ -97,7 +126,7 @@ function parseComboString(raw, notation) {
 
 function parseCombo(raw) {
     const tokens = raw.trim().split(/\s+/);
-    const bladeToken = tokens[0];
+    let bladeToken = tokens[0];
     const rest = tokens.slice(1);
 
     //find ratchet
@@ -109,6 +138,8 @@ function parseCombo(raw) {
     if (ratchetIndex !== -1) {
         bladeParts = rest.slice(0, ratchetIndex);
         const match = rest[ratchetIndex].match(/^(\d+-\d+)(.*)$/);
+        if (!match) return { raw, unparsed: true }; //gaurd
+
         ratchet = match[1];
         const bitEnd = rest.slice(ratchetIndex + 1).join(' ').trim();
         bit = (match[2] + (bitEnd ? ' ' + bitEnd : '')).trim();
@@ -126,7 +157,14 @@ function parseCombo(raw) {
             bit = rest.join(' ').trim();
         }
     }
-    const isCX = bladeParts.length === 1 || bladeParts.length === 2;
+    let isCX = bladeParts.length === 1 || bladeParts.length === 2;
+
+    //allows us to also catch if blade names are seperaed (wizard rod instead of WizardRod)
+    if (isCX && !/^[A-Z][a-z]*[A-Z][a-z]*$/.test(bladeToken)) {
+        bladeToken = `${bladeToken} ${bladeParts[0]}`;
+        bladeParts = bladeParts.slice(1);
+        isCX = bladeParts.length === 1 || bladeParts.length === 2;
+    }
 
     return {bladeToken, bladeParts, isCX, ratchet, bit};
 }
@@ -141,8 +179,8 @@ function splitChipAndMain(bladeToken) {
 }
 
 //tool for storing new blades.
-async function getOrClassifyBlade(env, bladeToken, isCX, descriptors) {
-    const existing = await env.DB.prepare('SELECT * FROM blades WHERE name = ?').bind(bladeToken).fisrt();
+async function getOrClassifyBlade(env, bladeToken, isCX, bladeParts) {
+    const existing = await env.DB.prepare('SELECT * FROM blades WHERE name = ?').bind(bladeToken).first();
     if (existing) return existing; //check if blade already exists.
 
     //if its a new blade, classify/store
@@ -156,4 +194,24 @@ async function getOrClassifyBlade(env, bladeToken, isCX, descriptors) {
     ).bind(bladeToken, isCX ? 1 : 0, mainName, chipCategory).run();
 
     return { id: result.meta.last_row_id, is_cx: isCX ? 1 : 0, main_name : mainName,chip_category: chipCategory };
+}
+
+//Finds an existing part type or creates it if missing, returns ID
+async function getOrCreatePartType(env, typeName) {
+  const existing = await env.DB.prepare(`SELECT id FROM part_types WHERE name = ?`).bind(typeName).first();
+  if (existing) return existing.id;
+
+  const result = await env.DB.prepare(`INSERT INTO part_types (name) VALUES (?)`).bind(typeName).run();
+  return result.meta.last_row_id;
+}
+
+//Finds an existing part by name+type, or creates it if missing, returns its ID
+async function getOrCreatePart(env, name, typeName) {
+  const typeId = await getOrCreatePartType(env, typeName);
+
+  const existing = await env.DB.prepare(`SELECT id FROM parts WHERE name = ? AND part_type_id = ?`).bind(name, typeId).first();
+  if (existing) return existing.id;
+
+  const result = await env.DB.prepare(`INSERT INTO parts (name, part_type_id) VALUES (?, ?)`).bind(name, typeId).run();
+  return result.meta.last_row_id;
 }

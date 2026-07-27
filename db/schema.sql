@@ -8,9 +8,7 @@ CREATE TABLE blade_lines (
 CREATE TABLE blades (
   id INTEGER PRIMARY KEY,
   name TEXT,
-  is_cx INTEGER,  -- 0 or 1
-  main_name TEXT,  -- main blade
-  chip_category TEXT,  -- Metal v Plastic
+  blade_line_id INTEGER REFERENCES blade_lines(id)
 );
 
 -- Categories of part: Lock Chip, Main Blade, Over Blade, Assist Blade, Ratchet, Bit, etc.
