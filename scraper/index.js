@@ -1,5 +1,8 @@
 import * as cheerio from 'cheerio';
 
+const KNOWN_FUSED_BITS = ['Operate', 'Turbo'];
+const METAL_CHIPS = ['Emperor', 'Valkyrie']
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -90,4 +93,65 @@ function parseComboString(raw, notation) {
     const match = raw.match(/^(\S+)\s+(\d+-\d+)(.+)$/);
     if (!match) return { raw, notation, unparsed: true };
     return { blade: match[1], ratchet: match[2], bit: match[3].trim(), notation } ;
+}
+
+function parseCombo(raw) {
+    const tokens = raw.trim().split(/\s+/);
+    const bladeToken = tokens[0];
+    const rest = tokens.slice(1);
+
+    //find ratchet
+    const ratchetIndex = rest.findIndex(t => /\d+-\d+/.test(t));
+
+    let bladeParts, ratchet, bit;
+    
+    //if there is a ratchet, everything before is blade parts, everything after is bit.
+    if (ratchetIndex !== -1) {
+        bladeParts = rest.slice(0, ratchetIndex);
+        const match = rest[ratchetIndex].match(/^(\d+-\d+)(.*)$/);
+        ratchet = match[1];
+        const bitEnd = rest.slice(ratchetIndex + 1).join(' ').trim();
+        bit = (match[2] + (bitEnd ? ' ' + bitEnd : '')).trim();
+    } else {
+        //no ratchet, check for fused bit
+        const lastWord = rest[rest.length - 1];
+        if (KNOWN_FUSED_BITS.includes(lastWord)) {
+            bladeParts = rest.slice(0, -1);
+            ratchet = null;
+            bit = lastWord;
+        } else {
+            //not known 
+            return {raw, unparsed: true};
+        }
+    }
+    const isCX = bladeParts.length === 1 || bladeParts.length === 2;
+
+    return {bladeToken, bladeParts, isCX, ratchet, bit};
+}
+
+//splits chip from blade in CX
+function splitChipAndMain(bladeToken) {
+    const match = bladeToken.match(/^([A-Z][a-z]*)([A-Z][a-z]*)$/);
+    const chipName = match[1];
+    const mainName = match[2];
+    const chipCategory = METAL_CHIPS.includes(chipName) ? 'Metal' : 'Plastic';
+    return { mainName, chipCategory }
+}
+
+//tool for storing new blades.
+async function getOrClassifyBlade(env, bladeToken, isCX, descriptors) {
+    const existing = await env.DB.prepare('SELECT * FROM blades WHERE name = ?').bind(bladeToken).fisrt();
+    if (existing) return existing; //check if blade already exists.
+
+    //if its a new blade, classify/store
+    let mainName = null, chipCategory = null;
+    if (isCX) {
+        ({ mainName, chipCategory } = splitChipAndMain(bladeToken));
+    }
+
+    const result = await env.DB.prepare(
+        'INSERT INTO blades (name, is_CX, main_name, chip_category) VALUES (?, ?, ?, ?)'
+    ).bind(bladeToken, isCX ? 1 : 0, mainName, chipCategory).run();
+
+    return { id: result.meta.last_row_id, is_cx: isCX ? 1 : 0, main_name : mainName,chip_category: chipCategory };
 }
