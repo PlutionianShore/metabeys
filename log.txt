@@ -2,5 +2,5 @@ Original idea:
     Build a scraper that reads every submission to WBO winning combos,
     add results to database and make everything look pretty.
 
-Issue #1: bot detection made to stop AI readers also stops me...
-Solution #1: bookmarklet??
+Issue #1: bot detection made to stop AI readers also stops my cloudfare...
+Solution #1: create something to autoread from my own open tab.
