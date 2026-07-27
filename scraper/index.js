@@ -215,3 +215,25 @@ async function getOrCreatePart(env, name, typeName) {
   const result = await env.DB.prepare(`INSERT INTO parts (name, part_type_id) VALUES (?, ?)`).bind(name, typeId).run();
   return result.meta.last_row_id;
 }
+
+function toISODate9(dateString) {
+    const [month, day, year] = dateString.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+//Actually creating stats table
+async function getStats(env, days) {
+    const result = await env.DB.prepare(`
+        SELECT b.name AS blade, pt.name AS part_type, p.name AS part, COUNT(*) AS uses
+        FROM combos c
+        JOIN combo_parts cp ON cp.combo_id = c.id
+        JOIN parts p ON p.id = cp.part_id
+        JOIN part_types pt ON pt.id = p.part_type_id
+        JOIN blades b ON b.id = c.blade_id
+        WHERE c.posted_at >= date('now', ?)
+        GROUP BY b.name, pt.name, p.name
+        ORDER BY b.name, uses DESC
+    `).bind(`-${days} days`).all();
+
+    return result.results;
+}

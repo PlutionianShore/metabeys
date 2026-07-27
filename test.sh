@@ -78,3 +78,14 @@ JOIN parts ON combo_parts.part_id = parts.id
 GROUP BY parts.id
 ORDER BY uses DESC;
 "
+
+wrangler d1 execute beyblade-combos --local --command "
+SELECT b.name AS blade, pt.name AS part_type, p.name AS part, 
+COUNT(*) AS uses FROM combos c 
+JOIN combo_parts cp ON cp.combo_id = c.id 
+JOIN parts p ON p.id = cp.part_id 
+JOIN part_types pt ON pt.id = p.part_type_id 
+JOIN blades b ON b.id = c.blade_id 
+WHERE c.posted_at >= date('now', '-7 days') 
+GROUP BY b.name, pt.name, p.name 
+ORDER BY b.name, uses DESC;"
