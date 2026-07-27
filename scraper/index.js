@@ -120,8 +120,10 @@ function parseCombo(raw) {
             ratchet = null;
             bit = lastWord;
         } else {
-            //not known 
-            return {raw, unparsed: true};
+            //no ratchet, no fused bit, UX expanded
+            bladeParts = [];
+            ratchet = null;
+            bit = rest.join(' ').trim();
         }
     }
     const isCX = bladeParts.length === 1 || bladeParts.length === 2;
