@@ -6,15 +6,17 @@ const PART_TYPES = ['Lock Chip', 'Main Blade', 'Over Blade', 'Assist Blade', 'Ra
 
 export default {
     async fetch(request, env, ctx) {
-        const url = new URL(request.url);
-        
-        if (url.pathname === "/submit" && request.method === "POST") {
-            return handleSubmit(request, env);
+        const url = new URL(request.url);   
+        if(url.pathname === "/submit" && request.method === "POST") {
+            return handleSubmit(request, env)
+        }
+        if(url.pathname === "/stats" && Request.method === "GET") {
+            return handleStats(env)
         }
 
-        return new Response("Not Found", { status: 404 });
+        
     }
-};
+}
 
 function parsePost($, el) {
     //turn <br> and <hr> into /n and ---
@@ -237,3 +239,5 @@ async function getStats(env, days) {
 
     return result.results;
 }
+
+
