@@ -6,15 +6,58 @@ const PART_TYPES = ['Lock Chip', 'Main Blade', 'Over Blade', 'Assist Blade', 'Ra
 
 export default {
     async fetch(request, env, ctx) {
-        const url = new URL(request.url);
-        
-        if (url.pathname === "/submit" && request.method === "POST") {
-            return handleSubmit(request, env);
+        const url = new URL(request.url);   
+        if(url.pathname === "/submit" && request.method === "POST") {
+            return handleSubmit(request, env)
+        }
+        if(url.pathname === "/stats" && request.method === "GET") {
+            return handleStats(env)
         }
 
         return new Response("Not Found", { status: 404 });
     }
-};
+}
+
+async function handleStats(env) {
+    try {
+        const windows = { week1: 7, week2: 14, week4: 28};
+        const stats = {};
+
+        for (const [label, days] of Object.entries(windows)) {
+            const byBlade = await env.DB.prepare(`
+                SELECT b.name AS blade, pt.name AS part_type, p.name AS part, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts cp ON cp.combo_id = c.id
+                JOIN parts p ON p.id = cp.part_id
+                JOIN part_types pt ON pt.id = p.part_type_id
+                JOIN blades b ON b.id = c.blade_id
+                WHERE c.posted_at >= date('now', ?)
+                GROUP BY b.name, pt.name, p.name
+                ORDER BY b.name, uses DESC
+                `).bind(`-${days} days`).all();
+
+            const metaParts = await env.DB.prepare(`
+                SELECT pt.name AS part_type, p.name AS part, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts cp ON cp.combo_id = c.id
+                JOIN parts p ON p.id = cp.part_id
+                JOIN part_types pt ON pt.id = p.part_type_id
+                WHERE c.posted_at >= date('now', ?)
+                GROUP BY pt.name, p.name
+                ORDER BY uses DESC
+                `).bind(`-${days} days`).all();
+
+            stats[label] = {byBlade: byBlade.results, metaParts: metaParts.results }
+
+        }
+
+        return new Response(JSON.stringify(stats, null, 2), {headers: { "Content-Type": "application/json" }});
+    }
+    
+    catch (error) {
+        return new Response('Error retrieving stats: ' + error.message, { status: 500 });
+    }
+}   
 
 function parsePost($, el) {
     //turn <br> and <hr> into /n and ---
@@ -71,7 +114,7 @@ async function handleSubmit(request, env) {
         //Loop through every post on the page
         for (const el of $('.post_body').toArray()) {
             const post = parsePost($, el);
-            const eventDate = post.meta['Date'];
+            const eventDate = toISODate(post.meta['Date']);
 
             //Loop through every combo
             for (const placement of post.placements) {
@@ -215,3 +258,27 @@ async function getOrCreatePart(env, name, typeName) {
   const result = await env.DB.prepare(`INSERT INTO parts (name, part_type_id) VALUES (?, ?)`).bind(name, typeId).run();
   return result.meta.last_row_id;
 }
+
+function toISODate(dateString) {
+    const [month, day, year] = dateString.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+//Actually creating stats table
+async function getStats(env, days) {
+    const result = await env.DB.prepare(`
+        SELECT b.name AS blade, pt.name AS part_type, p.name AS part, COUNT(*) AS uses
+        FROM combos c
+        JOIN combo_parts cp ON cp.combo_id = c.id
+        JOIN parts p ON p.id = cp.part_id
+        JOIN part_types pt ON pt.id = p.part_type_id
+        JOIN blades b ON b.id = c.blade_id
+        WHERE c.posted_at >= date('now', ?)
+        GROUP BY b.name, pt.name, p.name
+        ORDER BY b.name, uses DESC
+    `).bind(`-${days} days`).all();
+
+    return result.results;
+}
+
+
