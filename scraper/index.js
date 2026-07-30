@@ -7,8 +7,19 @@ const PART_TYPES = ['Lock Chip', 'Main Blade', 'Over Blade', 'Assist Blade', 'Ra
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);   
+        if(request.method === "OPTIONS") {
+            return new Response(null, {
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type"
+                }
+            });
+        }
         if(url.pathname === "/submit" && request.method === "POST") {
-            return handleSubmit(request, env)
+            const resp = await handleSubmit(request, env)
+            resp.headers.set("Access-Control-Allow-Origin", "*");
+            return resp;
         }
         if(url.pathname === "/stats" && request.method === "GET") {
             return handleStats(env)
@@ -112,50 +123,54 @@ async function handleSubmit(request, env) {
         const $ = cheerio.load(html);
 
         //Loop through every post on the page
-        for (const el of $('.post_body').toArray()) {
-            const post = parsePost($, el);
-            const eventDate = toISODate(post.meta['Date']);
+        for (const element of $('.post_body').toArray()) {
+            try {
+                const post = parsePost($, element);
+                const eventDate = toISODate(post.meta['Date']);
 
-            //Loop through every combo
-            for (const placement of post.placements) {
-                for (const comboLine of placement.combos) {
-                    try {const parsed = parseCombo(comboLine.raw);
-                        if (parsed.unparsed) continue; //skip things that are formatted weird
+                //Loop through every combo
+                for (const placement of post.placements) {
+                    for (const comboLine of placement.combos) {
+                        try {const parsed = parseCombo(comboLine.raw);
+                            if (parsed.unparsed) continue; //skip things that are formatted weird
 
-                        const blade = await getOrClassifyBlade(env, parsed.bladeToken, parsed.isCX, parsed.bladeParts);
+                            const blade = await getOrClassifyBlade(env, parsed.bladeToken, parsed.isCX, parsed.bladeParts);
 
-                        //Insert the combo row
-                        const insert = await env.DB.prepare(
-                        `INSERT INTO combos (blade_id, posted_at, event_name, raw_text) VALUES (?, ?, ?, ?)`
-                        ).bind(blade.id, eventDate, post.eventName, comboLine.raw).run();
-                        const comboId = insert.meta.last_row_id;
+                            //Insert the combo row
+                            const insert = await env.DB.prepare(
+                            `INSERT INTO combos (blade_id, posted_at, event_name, raw_text) VALUES (?, ?, ?, ?)`
+                            ).bind(blade.id, eventDate, post.eventName, comboLine.raw).run();
+                            const comboId = insert.meta.last_row_id;
 
-                        //Build the list of parts used incombo
-                        const partsUsed = [];
-                        if (blade.is_cx) {
-                            partsUsed.push([`${blade.chip_category} Lock Chip`, 'Lock Chip']);
-                            partsUsed.push([blade.main_name, 'Main Blade']);
-                        if (parsed.bladeParts.length === 2) partsUsed.push([parsed.bladeParts[0], 'Over Blade']);
-                            partsUsed.push([parsed.bladeParts[parsed.bladeParts.length - 1], 'Assist Blade']);
+                            //Build the list of parts used incombo
+                            const partsUsed = [];
+                            if (blade.is_cx) {
+                                partsUsed.push([`${blade.chip_category} Lock Chip`, 'Lock Chip']);
+                                partsUsed.push([blade.main_name, 'Main Blade']);
+                            if (parsed.bladeParts.length === 2) partsUsed.push([parsed.bladeParts[0], 'Over Blade']);
+                                partsUsed.push([parsed.bladeParts[parsed.bladeParts.length - 1], 'Assist Blade']);
+                            }
+                            if (parsed.ratchet) partsUsed.push([parsed.ratchet, 'Ratchet']);
+                                partsUsed.push([parsed.bit, 'Bit']);
+
+                            //Link every part to this combo
+                            for (const [name, type] of partsUsed) {
+                                const partId = await getOrCreatePart(env, name, type);
+                                await env.DB.prepare(`INSERT INTO combo_parts (combo_id, part_id) VALUES (?, ?)`).bind(comboId, partId).run();
+                            }
                         }
-                        if (parsed.ratchet) partsUsed.push([parsed.ratchet, 'Ratchet']);
-                            partsUsed.push([parsed.bit, 'Bit']);
-
-                        //Link every part to this combo
-                        for (const [name, type] of partsUsed) {
-                            const partId = await getOrCreatePart(env, name, type);
-                            await env.DB.prepare(`INSERT INTO combo_parts (combo_id, part_id) VALUES (?, ?)`).bind(comboId, partId).run();
+                        catch (error) {
+                            console.error(`Failed on combo: "${comboLine.raw}" — ${error.message}`);
                         }
-                    }
-                    catch (error) {
-                        console.error(`Failed on combo: "${comboLine.raw}" — ${error.message}`);
                     }
                 }
+            } catch (error) {
+                console.error(`Failed on post: ${error.message}`);
             }
         }
 
         return new Response("Inserted successfully");
-    } catch (error) {
+    } catch (error) { 
         return new Response(`Error processing request: ${error.message}`, { status: 500 });
     }
 }
