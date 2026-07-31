@@ -4,3 +4,19 @@ Original idea:
 
 Issue #1: bot detection made to stop AI readers also stops my cloudfare...
 Solution #1: create something to autoread from my own open tab.
+
+
+Issue #2-100: forgot to be documenting lmao. we got it tho.
+            after 5ever, it can no take date from the forum!!!
+
+Command:
+
+(function(){
+    const posts=document.querySelectorAll('.post_body');
+    let html='';
+    for(let i=0;i<posts.length;i++){
+        html+=posts[i].outerHTML;
+    }
+    console.log(`Found ${posts.length} posts, sending...`);
+    fetch('http://localhost:8787/submit',{method:'POST',body:html}).then(res=>res.text()).then(data=>console.log('Success:',data)).catch(err=>console.error('Failed:',err));
+})();
