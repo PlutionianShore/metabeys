@@ -45,7 +45,15 @@ async function handleStats(env) {
                 WHERE c.posted_at >= date('now', ?)
                 GROUP BY b.name, pt.name, p.name
                 ORDER BY b.name, uses DESC
-                `).bind(`-${days} days`).all();
+            `).bind(`-${days} days`).all();
+
+            const bladeTotals = await env.DB.prepare(`
+                SELECT b.name AS blade, COUNT(*) AS uses
+                FROM combos c
+                JOIN blades b ON b.id = c.blade_id
+                WHERE c.posted_at >= date('now', ?)
+                GROUP BY b.name
+            `).bind(`-${days} days`).all();
 
             const metaParts = await env.DB.prepare(`
                 SELECT pt.name AS part_type, p.name AS part, COUNT(*) AS uses
@@ -56,9 +64,10 @@ async function handleStats(env) {
                 WHERE c.posted_at >= date('now', ?)
                 GROUP BY pt.name, p.name
                 ORDER BY uses DESC
-                `).bind(`-${days} days`).all();
+            `).bind(`-${days} days`).all();
 
-            stats[label] = {byBlade: byBlade.results, metaParts: metaParts.results }
+            const bladeSummary = buildBladeSummary(byBlade.results, bladeTotals.results);
+            stats[label] = {byBlade: bladeSummary, metaParts: metaParts.results }
 
         }
 
@@ -70,7 +79,32 @@ async function handleStats(env) {
     }
 }   
 
+
+function buildBladeSummary(byBladeRows, bladeTotalsRows) {
+    //group the rows by blade name
+    const grouped = byBladeRows.reduce((acc, row) => {
+        if (!acc[row.blade]) acc[row.blade] = [];
+        acc[row.blade].push({ part_type: row.part_type, part: row.part, uses: row.uses });
+        return acc;
+    }, {});
+
+    //get total uses
+    const totals = bladeTotalsRows.reduce((acc, row) => {
+        acc[row.blade] = row.uses;
+        return acc;
+    }, {});
+
+    //create top 10
+    return Object.entries(grouped).map(([bladeName, parts]) => ({
+        blade: bladeName,
+        totalUses: totals[bladeName] || 0,
+        topParts: parts.slice(0, 10)
+    }));
+}
+
 function parsePost($, el) {
+    const postId = $(el).attr('id');
+    
     //turn <br> and <hr> into /n and ---
     let inner = $.html(el)
         .replace(/<br\s*\/?>/gi, '\n')
@@ -82,7 +116,7 @@ function parsePost($, el) {
     //split into lines
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l && l !== '---');
 
-    const post = { eventName: lines[0], meta: {}, placements: [] };
+    const post = { postId, eventName: lines[0], meta: {}, placements: [] };
     const placementRegex = /^(\d+)(st|nd|rd|th)\s+(.+)$/i;
     let current = null;
 
@@ -126,6 +160,20 @@ async function handleSubmit(request, env) {
         for (const element of $('.post_body').toArray()) {
             try {
                 const post = parsePost($, element);
+
+                //checking if processed
+                const alreadyProcessed = await env.DB.prepare(`SELECT post_id FROM processed_posts WHERE post_id = ?`).bind(post.postId).first();
+
+                if (alreadyProcessed) {
+                    console.error(`Skipping post ${post.postId} — already processed`);
+                    continue;
+                }
+
+                if (!post.meta['Date']) {
+                    console.error(`Skipping post: no Date field`);
+                    continue;
+                }
+
                 const eventDate = toISODate(post.meta['Date']);
 
                 //Loop through every combo
@@ -164,6 +212,9 @@ async function handleSubmit(request, env) {
                         }
                     }
                 }
+
+                await env.DB.prepare(`INSERT INTO processed_posts (post_id) VALUES (?)`).bind(post.postId).run();
+
             } catch (error) {
                 console.error(`Failed on post: ${error.message}`);
             }
