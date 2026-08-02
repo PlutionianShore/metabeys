@@ -79,7 +79,6 @@ async function handleStats(env) {
     }
 }   
 
-
 function buildBladeSummary(byBladeRows, bladeTotalsRows) {
     //group the rows by blade name
     const grouped = byBladeRows.reduce((acc, row) => {
@@ -146,6 +145,7 @@ function parsePost($, el) {
     return post;
 }
 
+//The big one 
 async function handleSubmit(request, env) {
     /*
         handles submitting requests, returns pared JSON
@@ -179,10 +179,19 @@ async function handleSubmit(request, env) {
                 //Loop through every combo
                 for (const placement of post.placements) {
                     for (const comboLine of placement.combos) {
-                        try {const parsed = parseCombo(comboLine.raw);
+                        try {
+                            const parsed = parseCombo(comboLine.raw);
                             if (parsed.unparsed) continue; //skip things that are formatted weird
 
-                            const blade = await getOrClassifyBlade(env, parsed.bladeToken, parsed.isCX, parsed.bladeParts);
+                            //figure out the blade's actual name, and pull chip category
+                            //out separately if this is a CX combo
+                            let bladeName = parsed.bladeToken;
+                            let chipCategory = null;
+                            if (parsed.isCX) {
+                                ({ mainName: bladeName, chipCategory } = splitChipAndMain(parsed.bladeToken));
+                            }
+
+                            const blade = await getOrClassifyBlade(env, bladeName, parsed.isCX);
 
                             //Insert the combo row
                             const insert = await env.DB.prepare(
@@ -193,13 +202,12 @@ async function handleSubmit(request, env) {
                             //Build the list of parts used incombo
                             const partsUsed = [];
                             if (blade.is_cx) {
-                                partsUsed.push([`${blade.chip_category} Lock Chip`, 'Lock Chip']);
-                                partsUsed.push([blade.main_name, 'Main Blade']);
-                            if (parsed.bladeParts.length === 2) partsUsed.push([parsed.bladeParts[0], 'Over Blade']);
+                                partsUsed.push([`${chipCategory} Lock Chip`, 'Lock Chip']);
+                                if (parsed.bladeParts.length === 2) partsUsed.push([parsed.bladeParts[0], 'Over Blade']);
                                 partsUsed.push([parsed.bladeParts[parsed.bladeParts.length - 1], 'Assist Blade']);
                             }
                             if (parsed.ratchet) partsUsed.push([parsed.ratchet, 'Ratchet']);
-                                partsUsed.push([parsed.bit, 'Bit']);
+                            partsUsed.push([standardizePartName(parsed.bit), 'Bit']);
 
                             //Link every part to this combo
                             for (const [name, type] of partsUsed) {
@@ -234,48 +242,52 @@ function parseComboString(raw, notation) {
 }
 
 function parseCombo(raw) {
-    const tokens = raw.trim().split(/\s+/);
-    let bladeToken = tokens[0];
-    const rest = tokens.slice(1);
+    const trimmed = raw.trim();
 
-    //find ratchet
-    const ratchetIndex = rest.findIndex(t => /\d+-\d+/.test(t));
+    //Search the string for a ratchet pattern
+    const ratchetMatch = trimmed.match(/(\d+-\d+)(.*)$/);
 
-    let bladeParts, ratchet, bit;
+    let bladeToken, descriptors, ratchet, bit;
     
     //if there is a ratchet, everything before is blade parts, everything after is bit.
-    if (ratchetIndex !== -1) {
-        bladeParts = rest.slice(0, ratchetIndex);
-        const match = rest[ratchetIndex].match(/^(\d+-\d+)(.*)$/);
-        if (!match) return { raw, unparsed: true }; //gaurd
+    if (ratchetMatch) {
+        const beforeRatchet = trimmed.slice(0, ratchetMatch.index).trim();
+        const afterRatchet = ratchetMatch[2].trim();
 
-        ratchet = match[1];
-        const bitEnd = rest.slice(ratchetIndex + 1).join(' ').trim();
-        bit = (match[2] + (bitEnd ? ' ' + bitEnd : '')).trim();
+        ratchet = ratchetMatch[1];
+        bit = afterRatchet;
+
+        const beforeTokens = beforeRatchet.split(/\s+/);
+        bladeToken = beforeTokens[0];
+        const descriptorBlob = beforeTokens.slice(1).join('');
+        descriptors = descriptorBlob ? splitCapitalizedWords(descriptorBlob) : [];
     } else {
         //no ratchet, check for fused bit
+        const tokens = trimmed.split(/\s+/);
+        bladeToken = tokens[0];
+        const rest = tokens.slice(1);
         const lastWord = rest[rest.length - 1];
+
         if (KNOWN_FUSED_BITS.includes(lastWord)) {
-            bladeParts = rest.slice(0, -1);
+            descriptors = rest.slice(0, -1);
             ratchet = null;
             bit = lastWord;
         } else {
-            //no ratchet, no fused bit, UX expanded
-            bladeParts = [];
+            descriptors = [];
             ratchet = null;
             bit = rest.join(' ').trim();
         }
     }
-    let isCX = bladeParts.length === 1 || bladeParts.length === 2;
+    let isCX = descriptors.length === 1 || descriptors.length === 2;
 
     //allows us to also catch if blade names are seperaed (wizard rod instead of WizardRod)
     if (isCX && !/^[A-Z][a-z]*[A-Z][a-z]*$/.test(bladeToken)) {
-        bladeToken = `${bladeToken} ${bladeParts[0]}`;
-        bladeParts = bladeParts.slice(1);
-        isCX = bladeParts.length === 1 || bladeParts.length === 2;
+        bladeToken = `${bladeToken} ${descriptors[0]}`;
+        descriptors = descriptors.slice(1);
+        isCX = descriptors.length === 1 || descriptors.length === 2;
     }
 
-    return {bladeToken, bladeParts, isCX, ratchet, bit};
+    return { raw, bladeToken, bladeParts: descriptors, isCX, ratchet, bit};
 }
 
 //splits chip from blade in CX
@@ -288,21 +300,16 @@ function splitChipAndMain(bladeToken) {
 }
 
 //tool for storing new blades.
-async function getOrClassifyBlade(env, bladeToken, isCX, bladeParts) {
-    const existing = await env.DB.prepare('SELECT * FROM blades WHERE name = ?').bind(bladeToken).first();
+async function getOrClassifyBlade(env, bladeName, isCX, bladeParts) {
+    const existing = await env.DB.prepare('SELECT * FROM blades WHERE name = ?').bind(bladeName).first();
     if (existing) return existing; //check if blade already exists.
 
     //if its a new blade, classify/store
-    let mainName = null, chipCategory = null;
-    if (isCX) {
-        ({ mainName, chipCategory } = splitChipAndMain(bladeToken));
-    }
-
     const result = await env.DB.prepare(
-        'INSERT INTO blades (name, is_CX, main_name, chip_category) VALUES (?, ?, ?, ?)'
-    ).bind(bladeToken, isCX ? 1 : 0, mainName, chipCategory).run();
+        'INSERT INTO blades (name, is_cx) VALUES (?, ?)'
+    ).bind(bladeName, isCX ? 1 : 0).run();
 
-    return { id: result.meta.last_row_id, is_cx: isCX ? 1 : 0, main_name : mainName,chip_category: chipCategory };
+    return { id: result.meta.last_row_id, is_cx: isCX ? 1 : 0 };
 }
 
 //Finds an existing part type or creates it if missing, returns ID
@@ -347,4 +354,18 @@ async function getStats(env, days) {
     return result.results;
 }
 
+//make everything standard usable format
+function standardizePartName(raw) {
+    return raw.trim().split(/\s+/)
+        .map(word => word[0].toUpperCase() + word.slice(1))
+        .join('');
+}
 
+//seoerate abd add soaces
+function toDisplayName(joined) {
+    return joined.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function splitCapitalizedWords(str) {
+    return str.replace(/\s+/g, '').split(/(?=[A-Z])/).filter(Boolean);
+}
