@@ -20,3 +20,7 @@ Command:
     console.log(`Found ${posts.length} posts, sending...`);
     fetch('http://localhost:8787/submit',{method:'POST',body:html}).then(res=>res.text()).then(data=>console.log('Success:',data)).catch(err=>console.error('Failed:',err));
 })();
+
+
+
+A bunch of duplication and CXissues later: Starting on front end
