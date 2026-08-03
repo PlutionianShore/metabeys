@@ -22,7 +22,9 @@ export default {
             return resp;
         }
         if(url.pathname === "/stats" && request.method === "GET") {
-            return handleStats(env)
+            const resp = await handleStats(env);
+            resp.headers.set("Access-Control-Allow-Origin", "*");
+            return resp;
         }
 
         return new Response("Not Found", { status: 404 });
