@@ -100,7 +100,7 @@ function buildBladeSummary(byBladeRows, bladeTotalsRows) {
         blade: bladeName,
         totalUses: totals[bladeName] || 0,
         topParts: parts.slice(0, 10)
-    }));
+    })).sort((a, b) => b.totalUses - a.totalUses);
 }
 
 function parsePost($, el) {

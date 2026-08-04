@@ -1,0 +1,13 @@
+
+
+.blade-row {
+    cursor: pointer;
+}
+
+.parts-list {
+    display: none;
+}
+
+.blade-card.expanded .parts-list {
+    display: block;
+}
