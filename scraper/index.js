@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 const KNOWN_FUSED_BITS = ['Operate', 'Turbo'];
 const METAL_CHIPS = ['Emperor', 'Valkyrie'];
 const PART_TYPES = ['Lock Chip', 'Main Blade', 'Over Blade', 'Assist Blade', 'Ratchet', 'Bit'];
+const IGNORED = ['Date', 'Own', '', 'Event', 'Tournament', 'Location', 'Format', 'Ruleset', 'Notes', 'Stadium:', 'Final', 'First', '5-second', 'Out-of-bounds'];
 
 export default {
     async fetch(request, env, ctx) {
@@ -191,6 +192,12 @@ async function handleSubmit(request, env) {
                             let chipCategory = null;
                             if (parsed.isCX) {
                                 ({ mainName: bladeName, chipCategory } = splitChipAndMain(parsed.bladeToken));
+                            }
+
+                            //just filtering out the ones that break it
+                            if (IGNORED.includes(bladeName)) {
+                                console.error(`Skipping combo: "${comboLine.raw}" — blade name "${bladeName}" ignored`);
+                                continue;
                             }
 
                             const blade = await getOrClassifyBlade(env, bladeName, parsed.isCX);

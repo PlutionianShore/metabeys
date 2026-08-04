@@ -11,6 +11,9 @@ Issue #2-100: forgot to be documenting lmao. we got it tho.
 
 Command:
 
+to clear just run: ./clear.sh
+
+
 (function(){
     const posts=document.querySelectorAll('.post_body');
     let html='';
