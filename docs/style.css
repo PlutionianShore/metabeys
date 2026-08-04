@@ -1,13 +1,168 @@
+body {
+    background-color: #2d2a3c;
+    color: #f8e2ff;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0 40px 60px;
+}
 
+/*Nav bar*/
+nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 0;
+}
 
-.blade-row {
+nav a {
+    background-color: #1a1823;
+    color: #f8e2ff;
+    text-decoration: none;
+    padding: 14px 28px;
+    border-radius: 12px;
+    border: 2px solid #e07a36;
+    font-weight: bold;
+}
+
+/* main ttile*/
+h1 {
+    text-align: center;
+    font-size: 64px;
+    font-weight: 900;
+    color: #f8e2ff;
+
+    /*glitch effect*/
+    text-shadow:
+        3px 3px 0 #e07a36,
+        -3px -3px 0 #b24ad0;
+    margin: 20px 0 40px;
+}
+
+/* week tabs*/
+#week-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: fit-content;
+    margin-bottom: 30px;
+}
+
+#week-tabs button {
+    background-color: transparent;
+    color: #f8e2ff;
+    border: 2px solid #b24ad0;
+    border-radius: 999px;
+    padding: 14px 40px;
+    font-size: 20px;
+    font-weight: bold;
     cursor: pointer;
 }
 
+#week-tabs button.active {
+    background-color: #b24ad0;
+}
+
+/* Blade list container */
+#blade-list {
+    background-color: #2d2a3c;
+    border: 3px solid #2d2a3c;
+    box-shadow:
+        5px 5px 0 #e07a36,
+        -5px -5px 0 #b24ad0;
+    border-radius: 24px;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/*Individual blade*/
+.blade-card {
+    margin-bottom: 12px;
+}
+
+.blade-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: #1a1823;
+    border-radius: 16px;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+.blade-row .rank {
+    background-color: #2d2a3c;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 24px;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+}
+
+.blade-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.blade-name {
+    flex-grow: 1;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.blade-uses {
+    font-size: 18px;
+    color: #b24ad0;
+    font-weight: bold;
+}
+
+/*blade parts*/
 .parts-list {
     display: none;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0 0 40px;
 }
 
 .blade-card.expanded .parts-list {
-    display: block;
+    display: flex;
+}
+
+.part-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: #1a1823;
+    border-radius: 12px;
+    padding: 8px 16px;
+}
+
+.part-row .rank {
+    background-color: #2d2a3c;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 16px;
+    font-weight: bold;
+    min-width: 24px;
+    text-align: center;
+}
+
+.part-img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.part-name {
+    flex-grow: 1;
+    font-size: 16px;
+}
+
+.part-uses {
+    font-size: 14px;
+    color: #b24ad0;
+    font-weight: bold;
 }
