@@ -1,0 +1,122 @@
+body {
+    background-color: #2d2a3c;
+    color: #f8e2ff;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0 40px 60px;
+}
+
+/*Nav bar*/
+nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 0px 0;
+}
+
+nav a {
+    background-color: #1a1823;
+    color: #f8e2ff;
+    font-family: 'Squada One', sans-serif;
+    font-size: 30px;
+    text-decoration: none;
+    text-align: center;
+    width: fit-content;
+    padding: 18px 28px;
+    padding-bottom:10px;
+    flex-shrink: 0;
+    flex-grow: 1;
+    max-width: 200px;
+    min-width: 175px;
+    margin-right: 10px;
+    border-bottom-right-radius: 24px;
+    border: 2px solid #e07a36;
+    border-top: 0px;
+    font-weight: bold;
+}
+
+nav a:hover {
+    border: 3px solid #f8e2ff;
+}
+
+nav b {
+    background-color: #1a1823;
+    color: #f8e2ff;
+    font-family: 'Squada One', sans-serif;
+    font-size: 40px;
+    text-decoration: none;
+    text-align: center;
+    width: fit-content;
+    padding: 12px 28px;
+    padding-bottom:20px;
+    flex-shrink: 0;
+    flex-grow: 1;
+    max-width: 500px;
+    min-width: 200px;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+    border: 2px solid #e07a36;
+    border-top: 0px;
+    font-weight: bold;
+}
+
+nav b:hover {
+    border: 3px solid #f8e2ff;
+}
+
+
+nav i {
+    background-color: #1a1823;
+    color: #f8e2ff;
+    font-family: 'Squada One', sans-serif;
+    font-size: 30px;
+    text-decoration: none;
+    text-align: center;
+    width: fit-content;
+    padding: 18px 28px;
+    flex-shrink: 0;
+    flex-grow: 1;
+    max-width: 200px;
+    min-width: 175px;
+    margin-left: 10px;
+    border-bottom-left-radius: 24px;
+    border: 3px solid #ffd9d0;
+    border-top: 0px;
+    font-weight: bold;
+}
+
+
+/* main ttile*/
+h1 {
+    text-align: center;
+    font-family: 'Squada One', sans-serif;
+    font-style: normal;
+    font-size: 95px;
+    font-weight: 900;
+    color: #f8e2ff;
+
+    /*glitch effect*/
+    text-shadow:
+        3px 3px 0 #e07a36,
+        -3px -3px 0 #b24ad0;
+    margin: 20px 0 40px;
+}
+
+
+h2 {
+    font-size: 21px;
+    text-align: center;
+    font-weight: 550;
+    line-height: 1.25;
+    color: #f8e2ff;
+
+    max-width: 180px;
+}
+
+p {
+    font-size: 18px;
+    line-height: 1.5;
+    color: #f8e2ff;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 20px;
+}
