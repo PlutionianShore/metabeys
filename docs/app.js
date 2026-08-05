@@ -6,6 +6,7 @@ async function loadStats() {
     //load default week1 stats
     const response = await fetch(STATS_URL);
     statsData = await response.json();
+    document.querySelector('#week-tabs button').classList.add('active');
     renderBlades('week1');
 }
 
@@ -23,7 +24,7 @@ function bladeImageSlug(joined) {
 
 function renderBlades(windowKey) {
     const container = document.getElementById('blade-list');
-    const blades = statsData[windowKey].byBlade;
+    const blades = statsData[windowKey].byBlade.slice(0, 20);;
 
     container.innerHTML = blades.map((blade, index) => `
         <div class="blade-card">
@@ -60,7 +61,11 @@ document.getElementById('blade-list').addEventListener('click', (event) => {
 
 //week buttons
 document.querySelectorAll('#week-tabs button').forEach(btn => {
-    btn.addEventListener('click', () => renderBlades(btn.dataset.window));
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#week-tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderBlades(btn.dataset.window);
+    });
 });
 
 loadStats();
