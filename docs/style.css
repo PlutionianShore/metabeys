@@ -302,17 +302,12 @@ info {
 
 /* mobile */
 @media (max-width: 700px) {
-    .tracker-layout {
-        display: flex;
-        flex-direction: column;
-    }
-
     nav {
         flex-direction: column;
         align-items: center;
     }
 
-    nav.left, nav.center, nav.right {
+    a.left, a.center, a.right {
         margin: 5px 0;
         min-width: 0;
         max-width: none;
@@ -325,8 +320,13 @@ info {
         position: static;
         flex-direction: row;
         justify-content: center;
-        width: auto;
+        width: 100%;
         margin-bottom: 20px;
+    }
+
+    .cont {
+        display: flex;
+        flex-direction: column;
     }
 
     #blade-list {
