@@ -324,7 +324,7 @@ info {
         margin-bottom: 20px;
     }
 
-    .cont {
+    cont {
         display: flex;
         flex-direction: column;
     }
