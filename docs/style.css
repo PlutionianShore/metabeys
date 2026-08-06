@@ -307,7 +307,7 @@ info {
         align-items: center;
     }
 
-    a.left, a.center, a.right {
+    nav a.left, nav a.center, nav a.right {
         margin: 5px 0;
         min-width: 0;
         max-width: none;
