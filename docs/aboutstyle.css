@@ -15,7 +15,6 @@ nav {
     justify-content: space-between;
     padding: 0px 0;
     margin: 0 -40px;
-    outline: 3px solid red;
 }
 
 nav a.left{
@@ -226,21 +225,25 @@ a.form-link:hover {
 
 /* mobile */
 @media (max-width: 760px) {
-    nav {
-        top: 0;
-        flex-direction: row;
-        width: 100vw;
-        margin-left: calc(-50vw + 50%);
-        flex-wrap: wrap;
-        justify-content: space-between;
-    }
-
-    nav a.left, nav a.center, nav a.right {
-        margin: 0 11px;
+    nav a.left, nav a.right {
+        margin: 0 0;
         min-width: 0;
         max-width: none;
         flex-shrink: 1;
         font-size: 16px;
         padding: 8px 10px;
+    }
+
+    nav a.center {
+        margin: 0 35px;
+        min-width: 0;
+        max-width: none;
+        flex-shrink: 1;
+        font-size: 16px;
+        padding: 8px 10px;
+    }
+
+    h1 {
+        font-size: 65px;
     }
 }
