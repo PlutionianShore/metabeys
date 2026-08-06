@@ -214,7 +214,7 @@ a.form-link:hover {
         -1px -1px 0 #b24ad0;
 }
 
-div id.visually-hidden {
+div#visually-hidden {
     border: 0;
     box-shadow: none;
 }
