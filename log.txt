@@ -20,8 +20,8 @@ to clear just run: ./clear.sh
     for(let i=0;i<posts.length;i++){
         html+=posts[i].outerHTML;
     }
-    console.log(`Found ${posts.length} posts, sending...`);9
-    fetch('http://localhost:8787/submit',{method:'POST',body:html}).then(res=>res.text()).then(data=>console.log('Success:',data)).catch(err=>console.error('Failed:',err));
+    console.log(`Found ${posts.length} posts, sending...`);
+    fetch('https://metabeys.meta-plutonian.workers.dev/submit',{method:'POST',body:html}).then(res=>res.text()).then(data=>console.log('Success:',data)).catch(err=>console.error('Failed:',err));
 })();
 
 

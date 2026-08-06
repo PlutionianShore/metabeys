@@ -1,4 +1,4 @@
-const STATS_URL = 'https://meta-plutonian.workers.dev/stats';
+const STATS_URL = 'https://metabeys.meta-plutonian.workers.dev/stats';
 
 let statsData = null;
 
