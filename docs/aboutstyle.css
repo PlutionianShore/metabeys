@@ -218,3 +218,21 @@ a.form-link:hover {
     border: 0;
     box-shadow: none;
 } */
+
+/* mobile */
+@media (max-width: 760px) {
+    nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    nav a.left, nav a.center, nav a.right {
+        margin: 5px 0;
+        min-width: 0;
+        max-width: none;
+        font-size: 16px;
+        padding: 8px 10px;
+        flex-grow: 0;
+    }
+}
