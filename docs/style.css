@@ -63,7 +63,7 @@ nav a.center {
     min-width: 200px;
     border-bottom-left-radius: 24px;
     border-bottom-right-radius: 24px;
-    border: 3px solid #ffd9d0;
+    border: 2px solid #ffd9d0;
     border-top: 0px;
     font-weight: bold;
 }
@@ -81,12 +81,11 @@ nav a.right {
     text-align: center;
     width: fit-content;
     padding: 18px 28px;
-    padding-bottom:10px;
     flex-shrink: 0;
     flex-grow: 1;
     max-width: 200px;
     min-width: 175px;
-    margin-right: 10px;
+    margin-left: 10px;
     border-bottom-left-radius: 24px;
     border: 2px solid #e07a36;
     border-top: 0px;
@@ -139,6 +138,21 @@ h2 {
     padding: 12px 34px;
 
     max-width: 180px;
+}
+
+p {
+    font-family: 'Rubik One', sans-serif;
+    font-size: 22px;
+    line-height: 1.5;
+    color: #f8e2ff;
+    font-weight: 500;
+    text-align: center;
+    max-width: 800px;
+    text-shadow:
+        0px -1px 0 #e07a36;
+    margin: 0 auto;
+    margin-bottom: 20px;
+    margin-top: -20px;
 }
 
 /* week tabs*/
@@ -339,9 +353,9 @@ info {
 
     #week-tabs button {
         font-size: 18px;
-        padding: 8px 16px;
+        padding: 4px 18px;
         border-width: 2px;
-        margin-bottom: -40px;
+        margin-bottom: -60px;
     }
 
     cont {
@@ -395,5 +409,10 @@ info {
 
     .part-uses {
         font-size: 13px;
+    }
+
+    p {
+        margin-top: -25px;
+        font-size: 18px;
     }
 }
