@@ -29,7 +29,7 @@ nav a.left {
     min-width: 175px;
     margin-right: 10px;
     border-bottom-right-radius: 24px;
-    border: 2px solid #e07a36;
+    border: 3px solid #e07a36;
     border-top: 0px;
     font-weight: bold;
 }
@@ -38,7 +38,7 @@ nav a.left button{
     cursor: pointer;
 }
 
-nav a:hover {
+nav a.left:hover {
     border: 3px solid #f8e2ff;
 }
 
@@ -58,7 +58,7 @@ nav a.center {
     min-width: 200px;
     border-bottom-left-radius: 24px;
     border-bottom-right-radius: 24px;
-    border: 3px solid #ffd9d0;
+    border: 2px solid #ffd9d0;
     border-top: 0px;
     font-weight: bold;
 }
@@ -66,6 +66,11 @@ nav a.center {
 nav a.center button{
     cursor: pointer;
 }
+
+nav a.center:hover {
+    border: 3px solid #f8e2ff;
+}
+
 
 nav a.right {
     background-color: #1a1823;
@@ -76,12 +81,11 @@ nav a.right {
     text-align: center;
     width: fit-content;
     padding: 18px 28px;
-    padding-bottom:10px;
     flex-shrink: 0;
     flex-grow: 1;
     max-width: 200px;
     min-width: 175px;
-    margin-right: 10px;
+    margin-left: 10px;
     border-bottom-left-radius: 24px;
     border: 2px solid #e07a36;
     border-top: 0px;
