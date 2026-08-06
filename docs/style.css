@@ -1,5 +1,6 @@
 body {
     background-color: #2d2a3c;
+    overflow-y: scroll;
     color: #f8e2ff;
     font-family: 'Arial', sans-serif;
     margin: 0;
@@ -9,8 +10,13 @@ body {
 /*Nav bar*/
 nav {
     display: flex;
+    position: sticky;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
     justify-content: space-between;
     padding: 0px 0;
+    margin: 0 -40px;
+    outline: 3px solid red;
 }
 
 nav a.left {
@@ -86,6 +92,7 @@ nav a.right {
     border: 2px solid #e07a36;
     border-top: 0px;
     font-weight: bold;
+    outline: 3px solid lime;
 }
 
 nav a.right button{
@@ -303,18 +310,21 @@ info {
 /* mobile */
 @media (max-width: 760px) {
     nav {
+        top: 0;
         flex-direction: row;
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
         flex-wrap: wrap;
-        justify-content: center;
+        justify-content: space-between;
     }
 
     nav a.left, nav a.center, nav a.right {
-        margin: 5px 0;
+        margin: 0 11px;
         min-width: 0;
         max-width: none;
+        flex-shrink: 1;
         font-size: 16px;
         padding: 8px 10px;
-        flex-grow: 0;
     }
 
     #week-tabs {
@@ -329,11 +339,16 @@ info {
         font-size: 18px;
         padding: 8px 16px;
         border-width: 2px;
+        margin-bottom: -40px;
     }
 
     cont {
         display: flex;
         flex-direction: column;
+    }
+
+    #blade-list {
+        margin-top: 0px;
     }
 
     #blade-list {
