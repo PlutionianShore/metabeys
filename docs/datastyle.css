@@ -100,7 +100,7 @@ nav a.right:hover {
     border: 3px solid #f8e2ff;
 }
 
-div {
+div.content-box {
     margin: 40px auto;
     box-shadow:
         4px 4px 0 #e07a36,
@@ -218,7 +218,7 @@ a.form-link:hover {
         -1px -1px 0 #b24ad0;
 }
 
-div#visually-hidden {
+/* div#visually-hidden {
     border: 0;
     box-shadow: none;
-}
+} */
