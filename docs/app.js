@@ -1,4 +1,4 @@
-const STATS_URL = 'http://localhost:8787/stats';
+const STATS_URL = 'https://meta-plutonian.workers.dev/stats';
 
 let statsData = null;
 

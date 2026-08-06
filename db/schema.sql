@@ -1,13 +1,17 @@
--- Which line: CX, BX, UX, Expanded ignored
+-- Which line: CX, BX, UX, Expanded ignored (currently unused, kept for reference)
 CREATE TABLE blade_lines (
   id INTEGER PRIMARY KEY,
-  name TEXT UNIQUE  
+  name TEXT UNIQUE
 );
 
 -- A specific blade
 CREATE TABLE blades (
   id INTEGER PRIMARY KEY,
   name TEXT,
+  blade_line_id INTEGER,
+  is_cx INTEGER,
+  main_name TEXT,
+  chip_category TEXT
 );
 
 -- Categories of part: Lock Chip, Main Blade, Over Blade, Assist Blade, Ratchet, Bit, etc.
@@ -28,7 +32,8 @@ CREATE TABLE combos (
   id INTEGER PRIMARY KEY,
   blade_id INTEGER REFERENCES blades(id),
   posted_at TEXT,   -- ISO date
-  raw_text TEXT
+  raw_text TEXT,
+  event_name TEXT
 );
 
 -- Junction table: which parts were used in which combo
@@ -36,4 +41,10 @@ CREATE TABLE combo_parts (
   combo_id INTEGER REFERENCES combos(id),
   part_id INTEGER REFERENCES parts(id),
   PRIMARY KEY (combo_id, part_id)
+);
+
+-- Tracks which forum posts have already been processed, to prevent duplicate inserts
+CREATE TABLE processed_posts (
+  post_id TEXT PRIMARY KEY,
+  processed_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
