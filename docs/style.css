@@ -29,7 +29,7 @@ nav a.left {
     min-width: 175px;
     margin-right: 10px;
     border-bottom-right-radius: 24px;
-    border: 3px solid #e07a36;
+    border: 2px solid #e07a36;
     border-top: 0px;
     font-weight: bold;
 }
@@ -38,7 +38,7 @@ nav a.left button{
     cursor: pointer;
 }
 
-nav a.left:hover {
+nav a:hover {
     border: 3px solid #f8e2ff;
 }
 
@@ -58,7 +58,7 @@ nav a.center {
     min-width: 200px;
     border-bottom-left-radius: 24px;
     border-bottom-right-radius: 24px;
-    border: 2px solid #ffd9d0;
+    border: 3px solid #ffd9d0;
     border-top: 0px;
     font-weight: bold;
 }
@@ -66,11 +66,6 @@ nav a.center {
 nav a.center button{
     cursor: pointer;
 }
-
-nav a.center:hover {
-    border: 3px solid #f8e2ff;
-}
-
 
 nav a.right {
     background-color: #1a1823;
@@ -81,11 +76,12 @@ nav a.right {
     text-align: center;
     width: fit-content;
     padding: 18px 28px;
+    padding-bottom:10px;
     flex-shrink: 0;
     flex-grow: 1;
     max-width: 200px;
     min-width: 175px;
-    margin-left: 10px;
+    margin-right: 10px;
     border-bottom-left-radius: 24px;
     border: 2px solid #e07a36;
     border-top: 0px;
@@ -305,10 +301,11 @@ info {
 }
 
 /* mobile */
-@media (max-width: 700px) {
+@media (max-width: 760px) {
     nav {
-        flex-direction: column;
-        align-items: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     nav a.left, nav a.center, nav a.right {
@@ -328,7 +325,13 @@ info {
         margin-bottom: 20px;
     }
 
-    cont {
+    #week-tabs button {
+        font-size: 18px;
+        padding: 8px 16px;
+        border-width: 2px;
+    }
+
+    .cont {
         display: flex;
         flex-direction: column;
     }
@@ -338,5 +341,42 @@ info {
         width: 100%;
         box-sizing: border-box;
         margin: 0;
+    }
+
+    .blade-row {
+        gap: 10px;
+        padding: 8px 12px;
+    }
+
+    .blade-img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .blade-name {
+        font-size: 16px;
+    }
+
+    .blade-uses {
+        font-size: 16px;
+    }
+
+    .blade-row .rank {
+        font-size: 18px;
+        padding: 6px 10px;
+        min-width: 28px;
+    }
+
+    .part-row {
+        gap: 8px;
+        padding: 6px 10px;
+    }
+
+    .part-name {
+        font-size: 13px;
+    }
+
+    .part-uses {
+        font-size: 13px;
     }
 }
