@@ -331,7 +331,7 @@ info {
         border-width: 2px;
     }
 
-    .cont {
+    cont {
         display: flex;
         flex-direction: column;
     }
