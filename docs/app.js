@@ -3,7 +3,7 @@ const STATS_URL = 'https://metabeys.meta-plutonian.workers.dev/stats';
 let statsData = null;
 
 async function loadStats() {
-    //load default week1 stats
+    /*load week1 stats*/
     const response = await fetch(STATS_URL);
     statsData = await response.json();
     document.querySelector('#week-tabs button').classList.add('active');

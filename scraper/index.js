@@ -311,7 +311,10 @@ function splitChipAndMain(bladeToken) {
 //tool for storing new blades.
 async function getOrClassifyBlade(env, bladeName, isCX, bladeParts) {
     const existing = await env.DB.prepare('SELECT * FROM blades WHERE name = ?').bind(bladeName).first();
-    if (existing) return existing; //check if blade already exists.
+    //check if blade already exists.
+    if (existing) {
+        return existing; 
+    }
 
     //if its a new blade, classify/store
     const result = await env.DB.prepare(
