@@ -226,6 +226,15 @@ a.form-link:hover {
 
 /* mobile */
 @media (max-width: 760px) {
+    nav {
+        top: 0;
+        flex-direction: row;
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+
     nav a.left {
         margin: 0 0;
         min-width: 90px;
@@ -241,7 +250,7 @@ a.form-link:hover {
         max-width: none;
         flex-shrink: 1;
         font-size: 16px;
-        padding: 8px 30px;
+        padding: 8px 23px;
     }
 
     nav a.center {
