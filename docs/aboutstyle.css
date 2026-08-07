@@ -107,7 +107,8 @@ div.content-box {
         -4px -4px 0 #b24ad0;
     border-radius: 35px;
     max-width: 1050px;
-    padding: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
 }
 
 /* main ttile*/
@@ -170,8 +171,8 @@ p {
     color: #f8e2ff;
     font-weight: 500;
     text-align: center;
-    max-width: 800px;
-    margin: 0 auto 20px;
+    max-width: 850px;
+    margin: 0 auto 15px;
     text-shadow:
         0px -0px 0 #e07a36;
     margin: 40px auto 40px;
@@ -183,8 +184,8 @@ p.green {
     line-height: 1.5;
     color: #5fd88c;
     text-align: center;
-    max-width: 800px;
-    margin: 0 auto 20px;
+    max-width: 850px;
+    margin: 0 auto 15px;
     text-shadow:
         0px -0px 0 #e07a36;
 }
@@ -195,8 +196,8 @@ p.red {
     line-height: 1.5;
     color: #f38787;
     text-align: center;
-    max-width: 800px;
-    margin: 0 auto 20px;
+    max-width: 850px;
+    margin: 0 auto 15px;
     text-shadow:
         0px 0px 0 #e07a36;
 }
@@ -225,25 +226,35 @@ a.form-link:hover {
 
 /* mobile */
 @media (max-width: 760px) {
-    nav a.left, nav a.right {
+    nav a.left {
         margin: 0 0;
-        min-width: 0;
+        min-width: 90px;
         max-width: none;
         flex-shrink: 1;
         font-size: 16px;
-        padding: 8px 10px;
+        padding: 8px 3px;
+    }
+
+    nav a.right {
+        margin: 0 0;
+        min-width: 90px;
+        max-width: none;
+        flex-shrink: 1;
+        font-size: 16px;
+        padding: 8px 30px;
     }
 
     nav a.center {
-        margin: 0 35px;
-        min-width: 0;
+        margin: 0 15px;
+        min-width: 40px;
         max-width: none;
         flex-shrink: 1;
         font-size: 16px;
-        padding: 8px 10px;
+        padding: 8px 3px;
     }
 
     h1 {
         font-size: 65px;
+        margin-top: 25px;
     }
 }
