@@ -36,7 +36,7 @@ function renderBlades(windowKey) {
                 <span class="blade-uses">${blade.totalUses} uses</span>
             </div>
             <div class="parts-list">
-                ${blade.topParts.map((part, partIndex) => `
+                ${blade.topParts.filter(part => part.part.length > 1).map((part, partIndex) => `
                     <div class="part-row">
                         <span class="rank">#${partIndex + 1}</span>
                         <img class="part-img" src="images/parts/${partImageSlug(part.part)}.png"
