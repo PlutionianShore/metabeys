@@ -327,6 +327,7 @@ info {
         width: 100vw;
         margin-left: calc(-50vw + 50%);
         flex-wrap: wrap;
+        transform: translateZ(0);
         justify-content: space-between;
     }
 

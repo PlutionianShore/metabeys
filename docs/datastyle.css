@@ -236,6 +236,8 @@ a.form-link:hover {
         margin-left: calc(-50vw + 50%);
         flex-wrap: wrap;
         justify-content: space-between;
+        transform: translateZ(0);
+
     }
 
     nav a.left {
