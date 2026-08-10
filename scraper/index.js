@@ -48,9 +48,7 @@ async function handleStats(env) {
                 WHERE c.posted_at >= date('now', ?)
                 GROUP BY b.name, pt.name, p.name
                 ORDER BY b.name, uses DESC
-            `).bind(`-${days} days`).all();
-
-            
+                `).bind(`-${days} days`).all();
 
             const bladeTotals = await env.DB.prepare(`
                 SELECT b.name AS blade, COUNT(*) AS uses
@@ -58,7 +56,19 @@ async function handleStats(env) {
                 JOIN blades b ON b.id = c.blade_id
                 WHERE c.posted_at >= date('now', ?)
                 GROUP BY b.name
-            `).bind(`-${days} days`).all();
+                `).bind(`-${days} days`).all();
+
+            
+            const metaParts = await env.DB.prepare(`
+                SELECT pt.name AS part_type, p.name AS part, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts cp ON cp.combo_id = c.id
+                JOIN parts p ON p.id = cp.part_id
+                JOIN part_types pt ON pt.id = p.part_type_id
+                WHERE c.posted_at >= date('now', ?)
+                GROUP BY pt.name, p.name
+                ORDER BY uses DESC
+                `).bind(`-${days} days`).all();
 
             const bitTotals = await env.DB.prepare(`
                 SELECT p.name AS bit, COUNT(*) AS uses
@@ -68,21 +78,9 @@ async function handleStats(env) {
                 JOIN part_types pt ON pt.id = p.part_type_id
                 WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?)
                 GROUP BY p.name
-                ORDER BY uses DESC
-            `).bind(`${days} days`).all();
+                `).bind(`-${days} days`).all();
 
-            const byBit = await env.DP.prepare(`
-                SELECT p.name AS bit, COUNT(*) AS uses
-                FROM combos c
-                JOIN combo_parts cp ON cp.combo_id = c.id
-                JOIN parts p ON p.id = cp.part_id
-                JOIN part_types pt ON pt.id = p.part_type_id
-                WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?)
-                GROUP BY p.name
-                ORDER BY uses DESC
-            `).bind(`${days} days`).all();
-
-            const bitParts = await env.DB.prepare(`
+            const bitPairings = await env.DB.prepare(`
                 SELECT bitp.name AS bit, b.name AS blade, ratp.name AS ratchet, COUNT(*) AS uses
                 FROM combos c
                 JOIN combo_parts bitcp ON bitcp.combo_id = c.id
@@ -97,22 +95,13 @@ async function handleStats(env) {
                 AND (ratpt.name = 'Ratchet' OR ratpt.name IS NULL)
                 GROUP BY bitp.name, b.name, ratp.name
                 ORDER BY bitp.name, uses DESC
-            `).bind(`-${days} days`).all();
+                `).bind(`-${days} days`).all();
 
-            const metaParts = await env.DB.prepare(`
-                SELECT pt.name AS part_type, p.name AS part, COUNT(*) AS uses
-                FROM combos c
-                JOIN combo_parts cp ON cp.combo_id = c.id
-                JOIN parts p ON p.id = cp.part_id
-                JOIN part_types pt ON pt.id = p.part_type_id
-                WHERE c.posted_at >= date('now', ?)
-                GROUP BY pt.name, p.name
-                ORDER BY uses DESC
-            `).bind(`-${days} days`).all();
+            const bitSummary = buildBitSummary(bitPairings.results, bitTotals.results);
 
             const bladeSummary = buildBladeSummary(byBlade.results, bladeTotals.results);
-            stats[label] = {byBlade: bladeSummary, metaParts: metaParts.results }
 
+            stats[label] = { byBlade: bladeSummary, byBit: bitSummary, metaParts: metaParts.results };
         }
 
         return new Response(JSON.stringify(stats, null, 2), {headers: { "Content-Type": "application/json" }});
@@ -158,14 +147,14 @@ function buildBitSummary(byBitRows, bitTotalRows){
         return acc
     }, {}) ;
 
-    const totals = bitTotalsRows.reduce((acc,row) => {
+    const totals = bitTotalRows.reduce((acc,row) => {
         acc[row.bit] = row.uses;
         return acc;
     }, {});
 
     return Object.entries(grouped).map(([bitName, parts]) => ({
         part: bitName,
-        totalUses: totals[bitname] || 0,
+        totalUses: totals[bitName] || 0,
         topParts: parts.slice(0,10) 
     })).sort((a,b) => b.totalUses -a.totalUses);
 }
