@@ -32,3 +32,13 @@ A bunch of duplication and CXissues later: Starting on front end
 CURRENT BUG:
     I thought it would be fine to ignore mistakes cause I'm only showing top 20 or something, but unfortunately First, Final, and Stadium made it
     I gotta filter out just those when I'm done with UI.S
+
+
+
+1.01 Patch Goals:
+-More comprehensive data
+    -ratchet/bit pairings
+    -main/assist pairings
+    -top 5 combos maybe??
+-BBAX data collection
+    -get details from admins

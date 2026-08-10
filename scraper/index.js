@@ -50,12 +50,53 @@ async function handleStats(env) {
                 ORDER BY b.name, uses DESC
             `).bind(`-${days} days`).all();
 
+            
+
             const bladeTotals = await env.DB.prepare(`
                 SELECT b.name AS blade, COUNT(*) AS uses
                 FROM combos c
                 JOIN blades b ON b.id = c.blade_id
                 WHERE c.posted_at >= date('now', ?)
                 GROUP BY b.name
+            `).bind(`-${days} days`).all();
+
+            const bitTotals = await env.DB.prepare(`
+                SELECT p.name AS bit, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts cp ON cp.combo_id = c.id
+                JOIN parts p ON p.id = cp.part_id
+                JOIN part_types pt ON pt.id = p.part_type_id
+                WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?)
+                GROUP BY p.name
+                ORDER BY uses DESC
+            `).bind(`${days} days`).all();
+
+            const byBit = await env.DP.prepare(`
+                SELECT p.name AS bit, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts cp ON cp.combo_id = c.id
+                JOIN parts p ON p.id = cp.part_id
+                JOIN part_types pt ON pt.id = p.part_type_id
+                WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?)
+                GROUP BY p.name
+                ORDER BY uses DESC
+            `).bind(`${days} days`).all();
+
+            const bitParts = await env.DB.prepare(`
+                SELECT bitp.name AS bit, b.name AS blade, ratp.name AS ratchet, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts bitcp ON bitcp.combo_id = c.id
+                JOIN parts bitp ON bitp.id = bitcp.part_id
+                JOIN part_types bitpt ON bitpt.id = bitp.part_type_id
+                JOIN blades b ON b.id = c.blade_id
+                LEFT JOIN combo_parts ratcp ON ratcp.combo_id = c.id
+                LEFT JOIN parts ratp ON ratp.id = ratcp.part_id
+                LEFT JOIN part_types ratpt ON ratpt.id = ratp.part_type_id AND ratpt.name = 'Ratchet'
+                WHERE bitpt.name = 'Bit'
+                AND c.posted_at >= date('now', ?)
+                AND (ratpt.name = 'Ratchet' OR ratpt.name IS NULL)
+                GROUP BY bitp.name, b.name, ratp.name
+                ORDER BY bitp.name, uses DESC
             `).bind(`-${days} days`).all();
 
             const metaParts = await env.DB.prepare(`
@@ -85,7 +126,9 @@ async function handleStats(env) {
 function buildBladeSummary(byBladeRows, bladeTotalsRows) {
     //group the rows by blade name
     const grouped = byBladeRows.reduce((acc, row) => {
-        if (!acc[row.blade]) acc[row.blade] = [];
+        if (!acc[row.blade]) {
+            acc[row.blade] = [];
+        }
         acc[row.blade].push({ part_type: row.part_type, part: row.part, uses: row.uses });
         return acc;
     }, {});
@@ -102,6 +145,29 @@ function buildBladeSummary(byBladeRows, bladeTotalsRows) {
         totalUses: totals[bladeName] || 0,
         topParts: parts.slice(0, 10)
     })).sort((a, b) => b.totalUses - a.totalUses);
+}
+
+function buildBitSummary(byBitRows, bitTotalRows){
+    /*blade summary bit for bits, people were curious about a ranking by bit
+    Exact same as bladesummary, but only returns blade and ratchet for bits.*/
+    const grouped = byBitRows.reduce((acc, row) => {
+        if(!acc[row.bit]) {
+            acc[row.bit] = [];
+        }
+        acc[row.bit].push({ blade: row.blade, ratchet: row.ratchet, uses: row.uses });
+        return acc
+    }, {}) ;
+
+    const totals = bitTotalsRows.reduce((acc,row) => {
+        acc[row.bit] = row.uses;
+        return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([bitName, parts]) => ({
+        part: bitName,
+        totalUses: totals[bitname] || 0,
+        topParts: parts.slice(0,10) 
+    })).sort((a,b) => b.totalUses -a.totalUses);
 }
 
 function parsePost($, el) {
