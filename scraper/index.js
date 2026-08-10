@@ -70,7 +70,7 @@ async function handleStats(env) {
                 ORDER BY uses DESC
                 `).bind(`-${days} days`).all();
 
-            const bitTotals = await env.DB.prepare(`
+            const bitTotal = await env.DB.prepare(`
                 SELECT p.name AS bit, COUNT(*) AS uses
                 FROM combos c
                 JOIN combo_parts cp ON cp.combo_id = c.id
@@ -97,7 +97,7 @@ async function handleStats(env) {
                 ORDER BY bitp.name, uses DESC
                 `).bind(`-${days} days`).all();
 
-            const bitSummary = buildBitSummary(bitPairings.results, bitTotals.results);
+            const bitSummary = buildBitSummary(bitPairings.results, bitTotal.results);
 
             const bladeSummary = buildBladeSummary(byBlade.results, bladeTotals.results);
 
@@ -136,7 +136,7 @@ function buildBladeSummary(byBladeRows, bladeTotalsRows) {
     })).sort((a, b) => b.totalUses - a.totalUses);
 }
 
-function buildBitSummary(byBitRows, bitTotalRows){
+function buildBitSummary(byBitRows, bitTotalsRows){
     /*blade summary bit for bits, people were curious about a ranking by bit
     Exact same as bladesummary, but only returns blade and ratchet for bits.*/
     const grouped = byBitRows.reduce((acc, row) => {
@@ -147,7 +147,7 @@ function buildBitSummary(byBitRows, bitTotalRows){
         return acc
     }, {}) ;
 
-    const totals = bitTotalRows.reduce((acc,row) => {
+    const totals = bitTotalsRows.reduce((acc,row) => {
         acc[row.bit] = row.uses;
         return acc;
     }, {});
