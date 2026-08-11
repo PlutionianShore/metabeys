@@ -81,20 +81,37 @@ async function handleStats(env) {
                 `).bind(`-${days} days`).all();
 
             const bitPairings = await env.DB.prepare(`
-                SELECT bitp.name AS bit, b.name AS blade, ratp.name AS ratchet, COUNT(*) AS uses
-                FROM combos c
-                JOIN combo_parts bitcp ON bitcp.combo_id = c.id
-                JOIN parts bitp ON bitp.id = bitcp.part_id
-                JOIN part_types bitpt ON bitpt.id = bitp.part_type_id
-                JOIN blades b ON b.id = c.blade_id
-                LEFT JOIN combo_parts ratcp ON ratcp.combo_id = c.id
-                LEFT JOIN parts ratp ON ratp.id = ratcp.part_id
-                LEFT JOIN part_types ratpt ON ratpt.id = ratp.part_type_id AND ratpt.name = 'Ratchet'
-                WHERE bitpt.name = 'Bit'
-                AND c.posted_at >= date('now', ?)
-                AND (ratpt.name = 'Ratchet' OR ratpt.name IS NULL)
-                GROUP BY bitp.name, b.name, ratp.name
-                ORDER BY bitp.name, uses DESC
+                WITH combo_bit AS (
+                    SELECT c.id AS combo_id, bitp.name AS bit, b.name AS blade
+                    FROM combos c
+                    JOIN combo_parts bitcp ON bitcp.combo_id = c.id
+                    JOIN parts bitp ON bitp.id = bitcp.part_id
+                    JOIN part_types bitpt ON bitpt.id = bitp.part_type_id
+                    JOIN blades b ON b.id = c.blade_id
+                    WHERE bitpt.name = 'Bit' AND c.posted_at >= date('now', ?)
+                ),
+                other_parts AS (
+                    SELECT combo_id, GROUP_CONCAT(name, ' + ') AS parts_str
+                    FROM (
+                        SELECT cp.combo_id AS combo_id, p.name AS name
+                        FROM combo_parts cp
+                        JOIN parts p ON p.id = cp.part_id
+                        JOIN part_types pt ON pt.id = p.part_type_id
+                        WHERE pt.name != 'Bit'
+                        ORDER BY CASE pt.name
+                            WHEN 'Lock Chip' THEN 1
+                            WHEN 'Over Blade' THEN 2
+                            WHEN 'Assist Blade' THEN 3
+                            WHEN 'Ratchet' THEN 4
+                            ELSE 5 END
+                    )
+                    GROUP BY combo_id
+                )
+                SELECT cb.bit, cb.blade, op.parts_str AS other_parts, COUNT(*) AS uses
+                FROM combo_bit cb
+                LEFT JOIN other_parts op ON op.combo_id = cb.combo_id
+                GROUP BY cb.bit, cb.blade, op.parts_str
+                ORDER BY cb.bit, uses DESC
                 `).bind(`-${days} days`).all();
 
             const bitSummary = buildBitSummary(bitPairings.results, bitTotal.results);
@@ -143,7 +160,7 @@ function buildBitSummary(byBitRows, bitTotalsRows){
         if(!acc[row.bit]) {
             acc[row.bit] = [];
         }
-        acc[row.bit].push({ blade: row.blade, ratchet: row.ratchet, uses: row.uses });
+        acc[row.bit].push({ blade: row.blade, otherParts: row.other_parts, uses: row.uses });
         return acc
     }, {}) ;
 

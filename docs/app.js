@@ -58,7 +58,7 @@ function renderBits(windowKey) {
         <div class="blade-card">
             <div class="blade-row">
                 <span class="rank">#${index + 1}</span>
-                <img class="blade-img" src="images/parts/${partImageSlug(bit.part)}.png"
+                <img class="bit-img" src="images/parts/${partImageSlug(bit.part)}.png"
                      onerror="this.onerror=null; this.src='images/parts/placeholder.png';">
                 <span class="blade-name">${toDisplayName(bit.part)}</span>
                 <span class="blade-uses">${bit.totalUses} uses</span>
@@ -68,7 +68,7 @@ function renderBits(windowKey) {
                     <div class="part-row">
                         <span class="rank">#${pairIndex + 1}</span>
                         <span class="part-name">
-                            ${toDisplayName(pairing.blade)}${pairing.ratchet ? ' + ' + toDisplayName(pairing.ratchet) : ''}
+                            ${toDisplayName(pairing.blade)}${pairing.otherParts ? ' + ' + pairing.otherParts.split(' + ').map(toDisplayName).join(' + ') : ''}
                         </span>
                         <span class="part-uses">${pairing.uses} uses</span>
                     </div>
