@@ -64,11 +64,11 @@ function renderBits(windowKey) {
                 <span class="blade-uses">${bit.totalUses} uses</span>
             </div>
             <div class="parts-list">
-                ${bit.topParts.map((pairing, pairIndex) => `
+                ${bit.topParts.filter(pairing => pairing.ratchet !== bit.part).map((pairing, pairIndex) => `
                     <div class="part-row">
                         <span class="rank">#${pairIndex + 1}</span>
                         <span class="part-name">
-                            ${toDisplayName(pairing.blade)}${pairing.otherParts ? ' + ' + pairing.otherParts.split(' + ').map(toDisplayName).join(' + ') : ''}
+                            ${toDisplayName(pairing.blade)}${pairing.ratchet ? ' + ' + toDisplayName(pairing.ratchet) : ''}
                         </span>
                         <span class="part-uses">${pairing.uses} uses</span>
                     </div>

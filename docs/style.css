@@ -157,7 +157,35 @@ p {
     margin-top: -20px;
 }
 
-/* week tabs*/
+#sort-by {
+    position: absolute;
+    background-color: transparent;
+    color: #f8e2ff;
+    border: 2px solid #b24ad0;
+    background-color: #1a1823;
+    font-family: "Squada One", sans-serif;
+    border-radius: 10px;
+    padding: 6px 14px;
+    padding-bottom: 8px;
+    font-size: 22px;
+    font-weight: 100;
+    cursor: pointer;
+    margin-top: -40px;
+}
+
+#sort-by option {
+    font-family: "Squada One", sans-serif;
+    border: 2px solid #b24ad0;
+    background-color: #1a1823;
+    color: #f8e2ff;
+    font-size: 17px;
+    font-weight: 500;
+}
+
+#sort-by:hover {
+    border: 3px solid #f8e2ff;
+}
+
 #week-tabs {
     position: absolute;
     top: 0;

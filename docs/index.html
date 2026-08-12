@@ -28,13 +28,15 @@
 
     <h1>BBX Meta Ranking</h1>
 
-    <p>(Click on a blade to view it's most popular parts!)</p>
+    <select id="sort-by">
+        <option value="blade">Sort By Blade</option>
+        <option value="bit">Sort By Bit</option>
+    </select>
+
+    <p>(Click on an entry to view it's most popular parts!)</p>
 
     <cont>
-        <select id="sort-by">
-            <option value="blade">By Blade</option>
-            <option value="bit">By Bit</option>
-        </select>
+        
 
         <div id="week-tabs">
             <button data-window="week1">1 week</button>
@@ -42,6 +44,9 @@
             <button data-window="week4">4 weeks</button>
         </div>
 
+        <div id="blade-list-container">
+        
+        </div>
         <div id="blade-list"></div>
 
     </cont>
