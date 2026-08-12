@@ -157,34 +157,6 @@ p {
     margin-top: -20px;
 }
 
-#sort-by {
-    position: absolute;
-    background-color: transparent;
-    color: #f8e2ff;
-    border: 2px solid #b24ad0;
-    background-color: #1a1823;
-    font-family: "Squada One", sans-serif;
-    border-radius: 10px;
-    padding: 6px 14px;
-    padding-bottom: 8px;
-    font-size: 22px;
-    font-weight: 100;
-    cursor: pointer;
-    margin-top: -40px;
-}
-
-#sort-by option {
-    font-family: "Squada One", sans-serif;
-    border: 2px solid #b24ad0;
-    background-color: #1a1823;
-    color: #f8e2ff;
-    font-size: 17px;
-    font-weight: 500;
-}
-
-#sort-by:hover {
-    border: 3px solid #f8e2ff;
-}
 
 #week-tabs {
     position: absolute;
@@ -232,7 +204,10 @@ info {
 }
 
 /* Blade list container */
-#blade-list {
+
+#blade-list-container {
+    position: relative;
+    width: 100%;
     background-color: #2d2a3c;
     border: 3px solid #2d2a3c;
     box-shadow:
@@ -243,7 +218,45 @@ info {
     max-width: 900px;
     flex-grow: 1;
     margin: 0 auto;
-    
+}
+
+#filters {
+    position: absolute;
+    top: 20px;
+    left: 25px;
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+    margin-top: -7px;
+}
+
+#sort-by, #wbax {
+    background-color: #1a1823;
+    color: #f8e2ff;
+    border: 2px solid #b24ad0;
+    font-family: "Squada One", sans-serif;
+    border-radius: 10px;
+    padding: 6px 14px 8px;
+    font-size: 22px;
+    font-weight: 100;
+    cursor: pointer;
+}
+
+#sort-by option, #wbax option {
+    font-family: "Squada One", sans-serif;
+    border: 2px solid #b24ad0;
+    background-color: #1a1823;
+    color: #f8e2ff;
+    font-size: 17px;
+    font-weight: 100;
+}
+
+#sort-by:hover, #wbax:hover {
+    border: 3px solid #f8e2ff;
+}
+
+#blade-list {
+    padding-top: 50px;
 }
 
 /*Individual blade*/
