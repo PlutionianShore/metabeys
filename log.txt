@@ -9,7 +9,7 @@ Solution #1: create something to autoread from my own open tab.
 Issue #2-100: forgot to be documenting lmao. we got it tho.
             after 5ever, it can no take date from the forum!!!
 
-Command:
+Commands:
 
 to clear just run: ./clear.sh
 
@@ -24,6 +24,13 @@ to clear just run: ./clear.sh
     fetch('https://metabeys.meta-plutonian.workers.dev/submit',{method:'POST',body:html}).then(res=>res.text()).then(data=>console.log('Success:',data)).catch(err=>console.error('Failed:',err));
 })();
 
+Removing entry:
+    -find
+    wrangler d1 execute beyblade-combos --remote --command "SELECT id, event_name, raw_text, posted_at FROM combos WHERE raw_text LIKE '%THINGIWANTTOFIND%'"
+    -remove
+    wrangler d1 execute beyblade-combos --remote --command "DELETE FROM combo_parts WHERE combo_id = NUMBEROFTHINGID"
+    wrangler d1 execute beyblade-combos --remote --command "DELETE FROM combos WHERE id = NUMBEROFTHINGID"
+    wrangler d1 execute beyblade-combos --remote --command "SELECT * FROM combos WHERE blade_id = (SELECT id FROM blades WHERE name LIKE '%FAKENAME%')"
 
 
 A bunch of duplication and CXissues later: Starting on front end
