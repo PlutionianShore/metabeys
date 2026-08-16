@@ -18,7 +18,7 @@ export default {
             });
         }
         if(url.pathname === "/submit" && request.method === "POST") {
-            const resp = await handleSubmit(request, env)
+            const resp = await handleSubmit(request, env, url)
             resp.headers.set("Access-Control-Allow-Origin", "*");
             return resp;
         }
@@ -444,6 +444,44 @@ function standardizePartName(raw) {
         .map(word => word[0].toUpperCase() + word.slice(1))
         .join('');
 }
+
+
+async function insertCombo(env, { bladeToken, bladeParts, isCX, ratchet, bit, source, postedAt, eventName, rawText }) {
+    /*trying this as a way to split up handle submit cause rn it would only do WBO */
+    let bladeName = bladeToken;
+    let chipCategory = null;
+    if (isCX) {
+        ({ mainName: bladeName, chipCategory } = splitChipAndMain(bladeToken));
+    }
+
+    if (IGNORED.includes(bladeName)) {
+        throw new Error(`blade name "${bladeName}" ignored`);
+    }
+
+    const blade = await getOrClassifyBlade(env, bladeName, isCX);
+
+    const insert = await env.DB.prepare(
+        `INSERT INTO combos (blade_id, posted_at, event_name, raw_text, source) VALUES (?, ?, ?, ?, ?)`
+    ).bind(blade.id, postedAt, eventName, rawText, source).run();
+    const comboId = insert.meta.last_row_id;
+
+    const partsUsed = [];
+    if (blade.is_cx) {
+        partsUsed.push([`${chipCategory} Lock Chip`, 'Lock Chip']);
+        if (bladeParts.length === 2) partsUsed.push([bladeParts[0], 'Over Blade']);
+        partsUsed.push([bladeParts[bladeParts.length - 1], 'Assist Blade']);
+    }
+    if (ratchet) partsUsed.push([ratchet, 'Ratchet']);
+    partsUsed.push([standardizePartName(bit), 'Bit']);
+
+    for (const [name, type] of partsUsed) {
+        const partId = await getOrCreatePart(env, name, type);
+        await env.DB.prepare(`INSERT INTO combo_parts (combo_id, part_id) VALUES (?, ?)`).bind(comboId, partId).run();
+    }
+
+    return comboId;
+}
+
 
 //seoerate abd add soaces
 function toDisplayName(joined) {
