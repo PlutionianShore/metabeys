@@ -38,7 +38,7 @@ function renderBlades(windowKey) {
                 <span class="blade-uses">${blade.totalUses} uses</span>
             </div>
             <div class="parts-list">
-                ${blade.topParts.filter(part => part.part.length > 1).map((part, partIndex) => `
+                ${blade.topParts.filter(part => part.part.length > 2).map((part, partIndex) => `
                     <div class="part-row">
                         <span class="rank">#${partIndex + 1}</span>
                         <img class="part-img" src="images/parts/${partImageSlug(part.part)}.png"
@@ -54,7 +54,8 @@ function renderBlades(windowKey) {
 
 function renderBits(windowKey) {
     const container = document.getElementById('blade-list') ;
-    const bits = statsData[windowKey].byBit;
+    //removing repeat bits now
+    const bits = statsData[windowKey].byBit.filter(bit => bit.part.length > 2);
 
     container.innerHTML = bits.map((bit, index) => `
         <div class="blade-card">
