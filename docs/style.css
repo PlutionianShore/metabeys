@@ -440,7 +440,8 @@ info {
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
-        padding: 15px;
+        padding: 5px;
+        padding-top: 20px;
         margin: 0;
         margin-top: 40px;
     }
@@ -459,7 +460,7 @@ info {
         position: static;
         display: flex;
         flex: 1;
-        min-width: 125px;
+        min-width: 130px;
         width: 20%;
         font-size: 13px;
         padding: 6px 8px;
