@@ -459,7 +459,7 @@ info {
         position: static;
         display: flex;
         flex: 1;
-        min-width: 90px;
+        min-width: 125px;
         width: 20%;
         font-size: 13px;
         padding: 6px 8px;
