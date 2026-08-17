@@ -4,9 +4,11 @@ let statsData = null;
 
 async function loadStats() {
     /*load week1 stats*/
-    const response = await fetch(STATS_URL);
+    const response = await fetch(STATS_URL + currentSourceParam());
     statsData = await response.json();
-    document.querySelector('#week-tabs button').classList.add('active');
+    if (!document.querySelector('#week-tabs button.active')) {
+        document.querySelector('#week-tabs button').classList.add('active');
+    }
     renderCurrentView();
 }
 
@@ -92,7 +94,7 @@ document.getElementById('blade-list').addEventListener('click', (event) => {
 function renderCurrentView() {
     const windowKey = document.querySelector('#week-tabs button.active').dataset.window;
     const sortBy = document.getElementById('sort-by').value;
-
+    
     if (sortBy === 'bit') {
         renderBits(windowKey);
     } else {
@@ -100,7 +102,13 @@ function renderCurrentView() {
     }
 }
 
+function currentSourceParam() {
+    const val = document.getElementById('wbax').value; // matches your <option value="...">
+    return val === 'all' ? '' : `?source=${val}`;
+}
+
 document.getElementById('sort-by').addEventListener('change', renderCurrentView);
+document.getElementById('wbax').addEventListener('change', loadStats);
 
 //week buttons
 document.querySelectorAll('#week-tabs button').forEach(button => {
@@ -110,6 +118,7 @@ document.querySelectorAll('#week-tabs button').forEach(button => {
         renderCurrentView();
     });
 });
+
 
 
 

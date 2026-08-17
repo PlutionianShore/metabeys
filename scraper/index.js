@@ -23,7 +23,7 @@ export default {
             return resp;
         }
         if(url.pathname === "/stats" && request.method === "GET") {
-            const resp = await handleStats(env);
+            const resp = await handleStats(env, url);
             resp.headers.set("Access-Control-Allow-Origin", "*");
             return resp;
         }
@@ -32,12 +32,18 @@ export default {
     }
 }
 
-async function handleStats(env) {
+async function handleStats(env, url) {
     try {
         const windows = { week1: 7, week2: 14, week4: 28};
         const stats = {};
 
+        const sourceParam = (url.searchParams.get('source') || 'all').toUpperCase();
+        const sourceFilter = sourceParam === 'ALL' ? null : sourceParam;
+
         for (const [label, days] of Object.entries(windows)) {
+            const sourceCond = sourceFilter ? `AND c.source = ?` : '';
+            const bindArgs = sourceFilter ? [`-${days} days`, sourceFilter] : [`-${days} days`];
+
             const byBlade = await env.DB.prepare(`
                 SELECT b.name AS blade, pt.name AS part_type, p.name AS part, COUNT(*) AS uses
                 FROM combos c
@@ -45,18 +51,18 @@ async function handleStats(env) {
                 JOIN parts p ON p.id = cp.part_id
                 JOIN part_types pt ON pt.id = p.part_type_id
                 JOIN blades b ON b.id = c.blade_id
-                WHERE c.posted_at >= date('now', ?)
+                WHERE c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY b.name, pt.name, p.name
                 ORDER BY b.name, uses DESC
-                `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
             const bladeTotals = await env.DB.prepare(`
                 SELECT b.name AS blade, COUNT(*) AS uses
                 FROM combos c
                 JOIN blades b ON b.id = c.blade_id
-                WHERE c.posted_at >= date('now', ?)
+                WHERE c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY b.name
-                `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
             
             const metaParts = await env.DB.prepare(`
@@ -65,10 +71,10 @@ async function handleStats(env) {
                 JOIN combo_parts cp ON cp.combo_id = c.id
                 JOIN parts p ON p.id = cp.part_id
                 JOIN part_types pt ON pt.id = p.part_type_id
-                WHERE c.posted_at >= date('now', ?)
+                WHERE c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY pt.name, p.name
                 ORDER BY uses DESC
-                `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
             const bitTotal = await env.DB.prepare(`
                 SELECT p.name AS bit, COUNT(*) AS uses
@@ -76,9 +82,9 @@ async function handleStats(env) {
                 JOIN combo_parts cp ON cp.combo_id = c.id
                 JOIN parts p ON p.id = cp.part_id
                 JOIN part_types pt ON pt.id = p.part_type_id
-                WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?)
+                WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY p.name
-                `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
             const bitPairings = await env.DB.prepare(`
                 WITH combo_bit AS (
@@ -88,7 +94,7 @@ async function handleStats(env) {
                     JOIN parts bitp ON bitp.id = bitcp.part_id
                     JOIN part_types bitpt ON bitpt.id = bitp.part_type_id
                     JOIN blades b ON b.id = c.blade_id
-                    WHERE bitpt.name = 'Bit' AND c.posted_at >= date('now', ?)
+                    WHERE bitpt.name = 'Bit' AND c.posted_at >= date('now', ?) ${sourceCond} 
                 ),
                 other_parts AS (
                     SELECT combo_id, GROUP_CONCAT(name, ' + ') AS parts_str
@@ -112,7 +118,7 @@ async function handleStats(env) {
                 LEFT JOIN other_parts op ON op.combo_id = cb.combo_id
                 GROUP BY cb.bit, cb.blade, op.parts_str
                 ORDER BY cb.bit, uses DESC
-                `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
             const bitSummary = buildBitSummary(bitPairings.results, bitTotal.results);
 
