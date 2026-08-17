@@ -4,10 +4,12 @@ let statsData = null;
 
 async function loadStats() {
     /*load week1 stats*/
-    const response = await fetch(STATS_URL);
+    const response = await fetch(STATS_URL + currentSourceParam());
     statsData = await response.json();
-    document.querySelector('#week-tabs button').classList.add('active');
-    renderBlades('week1');
+    if (!document.querySelector('#week-tabs button.active')) {
+        document.querySelector('#week-tabs button').classList.add('active');
+    }
+    renderCurrentView();
 }
 
 function toDisplayName(joined) {
@@ -50,6 +52,34 @@ function renderBlades(windowKey) {
     `).join('');
 }
 
+function renderBits(windowKey) {
+    const container = document.getElementById('blade-list') ;
+    const bits = statsData[windowKey].byBit;
+
+    container.innerHTML = bits.map((bit, index) => `
+        <div class="blade-card">
+            <div class="blade-row">
+                <span class="rank">#${index + 1}</span>
+                <img class="bit-img" src="images/parts/${partImageSlug(bit.part)}.png"
+                     onerror="this.onerror=null; this.src='images/parts/placeholder.png';">
+                <span class="blade-name">${toDisplayName(bit.part)}</span>
+                <span class="blade-uses">${bit.totalUses} uses</span>
+            </div>
+            <div class="parts-list">
+                ${bit.topParts.filter(pairing => pairing.ratchet !== bit.part).map((pairing, pairIndex) => `
+                    <div class="part-row">
+                        <span class="rank">#${pairIndex + 1}</span>
+                        <span class="part-name">
+                            ${toDisplayName(pairing.blade)}${pairing.ratchet ? ' + ' + toDisplayName(pairing.ratchet) : ''}
+                        </span>
+                        <span class="part-uses">${pairing.uses} uses</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
 //if you click in the container, it finds which row was closest, possibly locked in strat?
 document.getElementById('blade-list').addEventListener('click', (event) => {
     const row = event.target.closest('.blade-row');
@@ -59,13 +89,37 @@ document.getElementById('blade-list').addEventListener('click', (event) => {
     card.classList.toggle('expanded');
 });
 
+
+//droptdown
+function renderCurrentView() {
+    const windowKey = document.querySelector('#week-tabs button.active').dataset.window;
+    const sortBy = document.getElementById('sort-by').value;
+    
+    if (sortBy === 'bit') {
+        renderBits(windowKey);
+    } else {
+        renderBlades(windowKey);
+    }
+}
+
+function currentSourceParam() {
+    const val = document.getElementById('wbax').value; // matches your <option value="...">
+    return val === 'all' ? '' : `?source=${val}`;
+}
+
+document.getElementById('sort-by').addEventListener('change', renderCurrentView);
+document.getElementById('wbax').addEventListener('change', loadStats);
+
 //week buttons
-document.querySelectorAll('#week-tabs button').forEach(btn => {
-    btn.addEventListener('click', () => {
+document.querySelectorAll('#week-tabs button').forEach(button => {
+    button.addEventListener('click', () => {
         document.querySelectorAll('#week-tabs button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderBlades(btn.dataset.window);
+        button.classList.add('active');
+        renderCurrentView();
     });
 });
+
+
+
 
 loadStats();

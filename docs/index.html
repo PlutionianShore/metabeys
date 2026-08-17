@@ -28,16 +28,35 @@
 
     <h1>BBX Meta Ranking</h1>
 
-    <p>(Click on a blade to view it's most popular parts!)</p>
+    <p>(Click on an entry to view it's most popular parts!)</p>
 
     <cont>
+
         <div id="week-tabs">
             <button data-window="week1">1 week</button>
             <button data-window="week2">2 weeks</button>
             <button data-window="week4">4 weeks</button>
         </div>
 
-        <div id="blade-list"></div>
+        <div id="blade-list-container">
+
+            <div id="filters">
+                <select id="sort-by">
+                    <option value="blade">Sort By Blade</option>
+                    <option value="bit">Sort By Bit</option>
+                </select>
+
+                <select id="wbax">
+                    <option value="all">Filter Tournament Organization: NONE</option>
+                    <option value="wbo">WBO results only</option>
+                    <option value="bbax">BBAX results only</option>
+
+                </select>
+            </div>
+
+            <div id="blade-list"></div>
+
+        </div>
 
     </cont>
 
