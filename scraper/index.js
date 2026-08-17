@@ -18,12 +18,12 @@ export default {
             });
         }
         if(url.pathname === "/submit" && request.method === "POST") {
-            const resp = await handleSubmit(request, env)
+            const resp = await handleSubmit(request, env, url)
             resp.headers.set("Access-Control-Allow-Origin", "*");
             return resp;
         }
         if(url.pathname === "/stats" && request.method === "GET") {
-            const resp = await handleStats(env);
+            const resp = await handleStats(env, url);
             resp.headers.set("Access-Control-Allow-Origin", "*");
             return resp;
         }
@@ -32,12 +32,18 @@ export default {
     }
 }
 
-async function handleStats(env) {
+async function handleStats(env, url) {
     try {
         const windows = { week1: 7, week2: 14, week4: 28};
         const stats = {};
 
+        const sourceParam = (url.searchParams.get('source') || 'all').toUpperCase();
+        const sourceFilter = sourceParam === 'ALL' ? null : sourceParam;
+
         for (const [label, days] of Object.entries(windows)) {
+            const sourceCond = sourceFilter ? `AND c.source = ?` : '';
+            const bindArgs = sourceFilter ? [`-${days} days`, sourceFilter] : [`-${days} days`];
+
             const byBlade = await env.DB.prepare(`
                 SELECT b.name AS blade, pt.name AS part_type, p.name AS part, COUNT(*) AS uses
                 FROM combos c
@@ -45,33 +51,80 @@ async function handleStats(env) {
                 JOIN parts p ON p.id = cp.part_id
                 JOIN part_types pt ON pt.id = p.part_type_id
                 JOIN blades b ON b.id = c.blade_id
-                WHERE c.posted_at >= date('now', ?)
+                WHERE c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY b.name, pt.name, p.name
                 ORDER BY b.name, uses DESC
-            `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
             const bladeTotals = await env.DB.prepare(`
                 SELECT b.name AS blade, COUNT(*) AS uses
                 FROM combos c
                 JOIN blades b ON b.id = c.blade_id
-                WHERE c.posted_at >= date('now', ?)
+                WHERE c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY b.name
-            `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
 
+            
             const metaParts = await env.DB.prepare(`
                 SELECT pt.name AS part_type, p.name AS part, COUNT(*) AS uses
                 FROM combos c
                 JOIN combo_parts cp ON cp.combo_id = c.id
                 JOIN parts p ON p.id = cp.part_id
                 JOIN part_types pt ON pt.id = p.part_type_id
-                WHERE c.posted_at >= date('now', ?)
+                WHERE c.posted_at >= date('now', ?) ${sourceCond}
                 GROUP BY pt.name, p.name
                 ORDER BY uses DESC
-            `).bind(`-${days} days`).all();
+                `).bind(...bindArgs).all();
+
+            const bitTotal = await env.DB.prepare(`
+                SELECT p.name AS bit, COUNT(*) AS uses
+                FROM combos c
+                JOIN combo_parts cp ON cp.combo_id = c.id
+                JOIN parts p ON p.id = cp.part_id
+                JOIN part_types pt ON pt.id = p.part_type_id
+                WHERE pt.name = 'Bit' AND c.posted_at >= date('now', ?) ${sourceCond}
+                GROUP BY p.name
+                `).bind(...bindArgs).all();
+
+            const bitPairings = await env.DB.prepare(`
+                WITH combo_bit AS (
+                    SELECT c.id AS combo_id, bitp.name AS bit, b.name AS blade
+                    FROM combos c
+                    JOIN combo_parts bitcp ON bitcp.combo_id = c.id
+                    JOIN parts bitp ON bitp.id = bitcp.part_id
+                    JOIN part_types bitpt ON bitpt.id = bitp.part_type_id
+                    JOIN blades b ON b.id = c.blade_id
+                    WHERE bitpt.name = 'Bit' AND c.posted_at >= date('now', ?) ${sourceCond} 
+                ),
+                other_parts AS (
+                    SELECT combo_id, GROUP_CONCAT(name, ' + ') AS parts_str
+                    FROM (
+                        SELECT cp.combo_id AS combo_id, p.name AS name
+                        FROM combo_parts cp
+                        JOIN parts p ON p.id = cp.part_id
+                        JOIN part_types pt ON pt.id = p.part_type_id
+                        WHERE pt.name != 'Bit'
+                        ORDER BY CASE pt.name
+                            WHEN 'Lock Chip' THEN 1
+                            WHEN 'Over Blade' THEN 2
+                            WHEN 'Assist Blade' THEN 3
+                            WHEN 'Ratchet' THEN 4
+                            ELSE 5 END
+                    )
+                    GROUP BY combo_id
+                )
+                SELECT cb.bit, cb.blade, op.parts_str AS other_parts, COUNT(*) AS uses
+                FROM combo_bit cb
+                LEFT JOIN other_parts op ON op.combo_id = cb.combo_id
+                GROUP BY cb.bit, cb.blade, op.parts_str
+                ORDER BY cb.bit, uses DESC
+                `).bind(...bindArgs).all();
+
+            const bitSummary = buildBitSummary(bitPairings.results, bitTotal.results);
 
             const bladeSummary = buildBladeSummary(byBlade.results, bladeTotals.results);
-            stats[label] = {byBlade: bladeSummary, metaParts: metaParts.results }
 
+            stats[label] = { byBlade: bladeSummary, byBit: bitSummary, metaParts: metaParts.results };
         }
 
         return new Response(JSON.stringify(stats, null, 2), {headers: { "Content-Type": "application/json" }});
@@ -85,7 +138,9 @@ async function handleStats(env) {
 function buildBladeSummary(byBladeRows, bladeTotalsRows) {
     //group the rows by blade name
     const grouped = byBladeRows.reduce((acc, row) => {
-        if (!acc[row.blade]) acc[row.blade] = [];
+        if (!acc[row.blade]) {
+            acc[row.blade] = [];
+        }
         acc[row.blade].push({ part_type: row.part_type, part: row.part, uses: row.uses });
         return acc;
     }, {});
@@ -102,6 +157,29 @@ function buildBladeSummary(byBladeRows, bladeTotalsRows) {
         totalUses: totals[bladeName] || 0,
         topParts: parts.slice(0, 10)
     })).sort((a, b) => b.totalUses - a.totalUses);
+}
+
+function buildBitSummary(byBitRows, bitTotalsRows){
+    /*blade summary bit for bits, people were curious about a ranking by bit
+    Exact same as bladesummary, but only returns blade and ratchet for bits.*/
+    const grouped = byBitRows.reduce((acc, row) => {
+        if(!acc[row.bit]) {
+            acc[row.bit] = [];
+        }
+        acc[row.bit].push({ blade: row.blade, otherParts: row.other_parts, uses: row.uses });
+        return acc
+    }, {}) ;
+
+    const totals = bitTotalsRows.reduce((acc,row) => {
+        acc[row.bit] = row.uses;
+        return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([bitName, parts]) => ({
+        part: bitName,
+        totalUses: totals[bitName] || 0,
+        topParts: parts.slice(0,10) 
+    })).sort((a,b) => b.totalUses -a.totalUses);
 }
 
 function parsePost($, el) {
@@ -372,6 +450,44 @@ function standardizePartName(raw) {
         .map(word => word[0].toUpperCase() + word.slice(1))
         .join('');
 }
+
+
+async function insertCombo(env, { bladeToken, bladeParts, isCX, ratchet, bit, source, postedAt, eventName, rawText }) {
+    /*trying this as a way to split up handle submit cause rn it would only do WBO */
+    let bladeName = bladeToken;
+    let chipCategory = null;
+    if (isCX) {
+        ({ mainName: bladeName, chipCategory } = splitChipAndMain(bladeToken));
+    }
+
+    if (IGNORED.includes(bladeName)) {
+        throw new Error(`blade name "${bladeName}" ignored`);
+    }
+
+    const blade = await getOrClassifyBlade(env, bladeName, isCX);
+
+    const insert = await env.DB.prepare(
+        `INSERT INTO combos (blade_id, posted_at, event_name, raw_text, source) VALUES (?, ?, ?, ?, ?)`
+    ).bind(blade.id, postedAt, eventName, rawText, source).run();
+    const comboId = insert.meta.last_row_id;
+
+    const partsUsed = [];
+    if (blade.is_cx) {
+        partsUsed.push([`${chipCategory} Lock Chip`, 'Lock Chip']);
+        if (bladeParts.length === 2) partsUsed.push([bladeParts[0], 'Over Blade']);
+        partsUsed.push([bladeParts[bladeParts.length - 1], 'Assist Blade']);
+    }
+    if (ratchet) partsUsed.push([ratchet, 'Ratchet']);
+    partsUsed.push([standardizePartName(bit), 'Bit']);
+
+    for (const [name, type] of partsUsed) {
+        const partId = await getOrCreatePart(env, name, type);
+        await env.DB.prepare(`INSERT INTO combo_parts (combo_id, part_id) VALUES (?, ?)`).bind(comboId, partId).run();
+    }
+
+    return comboId;
+}
+
 
 //seoerate abd add soaces
 function toDisplayName(joined) {
