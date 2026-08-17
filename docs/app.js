@@ -26,7 +26,7 @@ function bladeImageSlug(joined) {
 
 function renderBlades(windowKey) {
     const container = document.getElementById('blade-list');
-    const blades = statsData[windowKey].byBlade.slice(0, 20);;
+    const blades = statsData[windowKey].byBlade.slice(0, 30);
 
     container.innerHTML = blades.map((blade, index) => `
         <div class="blade-card">
@@ -55,7 +55,7 @@ function renderBlades(windowKey) {
 function renderBits(windowKey) {
     const container = document.getElementById('blade-list') ;
     //removing repeat bits now
-    const bits = statsData[windowKey].byBit.filter(bit => bit.part.length > 2);
+    const bits = statsData[windowKey].byBit.filter(bit => bit.part.length > 2).slice(0, 30);
 
     container.innerHTML = bits.map((bit, index) => `
         <div class="blade-card">
