@@ -460,7 +460,7 @@ info {
         position: static;
         display: flex;
         flex: 1;
-        min-width: 130px;
+        min-width: 95px;
         width: 20%;
         font-size: 13px;
         padding: 6px 8px;
@@ -469,7 +469,7 @@ info {
     #wbax {
         position: static;
         flex: 1;
-        min-width: 215px;
+        min-width: 210px;
         width: 50%;
         font-size: 13px;
         padding: 6px 8px;
