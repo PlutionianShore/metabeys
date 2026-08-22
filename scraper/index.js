@@ -27,6 +27,11 @@ export default {
             resp.headers.set("Access-Control-Allow-Origin", "*");
             return resp;
         }
+        if(url.pathname === "/submit-bbax" && request.method === "POST") {
+            const resp = await handleSubmitBbax(request, env)
+            resp.headers.set("Access-Control-Allow-Origin", "*");
+            return resp;
+        }
 
         return new Response("Not Found", { status: 404 });
     }
@@ -456,6 +461,7 @@ async function insertCombo(env, { bladeToken, bladeParts, isCX, ratchet, bit, so
     /*trying this as a way to split up handle submit cause rn it would only do WBO */
     let bladeName = bladeToken;
     let chipCategory = null;
+    const insert = await env.DB.prepare(`INSERT INTO combos (blade_id, posted_at, event_name, raw_text, source, season) VALUES (?, ?, ?, ?, ?, ?)`).bind(blade.id, postedAt, eventName, rawText, source, season).run();
     if (isCX) {
         ({ mainName: bladeName, chipCategory } = splitChipAndMain(bladeToken));
     }
@@ -496,4 +502,127 @@ function toDisplayName(joined) {
 
 function splitCapitalizedWords(str) {
     return str.replace(/\s+/g, '').split(/(?=[A-Z])/).filter(Boolean);
+}
+
+
+
+/*
+BBAX STUFF HERE:
+*/
+
+const BBAX_EVENT_COLUMNS = 5;
+const BBAX_BLOCK_SIZE = 16;
+
+//comverting ratchet format
+function normalizeRatchet(raw) {
+    if (!raw) {
+        return null;
+    }
+    const r = raw.trim();
+    if (!r || /^n\/?a$/i.test(r)) {
+        return null;
+    }
+    if (/^\d{3}$/.test(r)) return `${r[0]}-${r.slice(1)}`;
+    return r;
+}
+
+//converting bkade format.
+function cleanBladeName(raw) {
+    if (!raw) {
+        return null;
+    }
+    const r = raw.trim().replace(/\s+/g, ' ');
+    if (!r || /^n\/?a$/i.test(r)) {
+        return null;
+    }
+    return r;
+}
+
+//cnvert bit names
+function cleanBitName(raw) {
+    if (!raw) {
+        return null;
+    }
+    const r = raw.trim();
+    return r || null;
+}
+
+//the parser
+function parseBbaxRow(cells) {
+    const season = cells[0]?.trim();
+    const eventType = cells[1]?.trim();
+    const bracketLink = cells[4]?.trim();
+    const combos = [];
+
+    for (let p = 0; p < 3; p++) {
+        const base = BBAX_EVENT_COLUMNS + p * BBAX_BLOCK_SIZE;
+
+        for (let d = 0; d < 3; d++) {
+            const deckBase = base + 1 + d * 4;
+            const blade = cleanBladeName(cells[deckBase]);
+            const ratchet = normalizeRatchet(cells[deckBase + 2]);
+            const bit = cleanBitName(cells[deckBase + 3]);
+            if (blade && bit) {
+                combos.push({ blade, ratchet, bit, season, eventType })
+            };
+        }
+
+        const sbBase = base + 1 + 12;
+        const sbBlade = cleanBladeName(cells[sbBase]);
+        const sbRatchet = normalizeRatchet(cells[sbBase + 1]);
+        const sbBit = cleanBitName(cells[sbBase + 2]);
+        if (sbBlade && sbBit) {
+            combos.push({ blade: sbBlade, ratchet: sbRatchet, bit: sbBit, season, eventType });
+        }
+    }
+
+    return { season, eventType, bracketLink, combos };
+}
+
+//submit but for the BBAX stuff
+async function handleSubmitBbax(request, env) {
+    try {
+        const text = await request.text();
+        const rows = text.split('\n').map(r => r.replace(/\r$/, '')).filter(r => r.trim().length);
+
+        let insertedEvents = 0;
+        for (const row of rows) {
+            const cells = row.split('\t');
+            const { season, eventType, bracketLink, combos } = parseBbaxRow(cells);
+
+            const eventId = bracketLink || `${season}|${eventType}|${cells[5]}|${cells.length}`;
+            const alreadyProcessed = await env.DB.prepare(`SELECT post_id FROM processed_posts WHERE post_id = ?`).bind(`bbax:${eventId}`).first();
+            if (alreadyProcessed) {
+                console.error(`Skipping BBAX event ${eventId} — already processed`);
+                continue;
+            }
+
+            for (const combo of combos) {
+                try {
+                    if (IGNORED.includes(combo.blade)) continue;
+                    await insertCombo(env, {
+                        bladeToken: combo.blade,
+                        bladeParts: [],
+                        isCX: false,
+                        ratchet: combo.ratchet,
+                        bit: combo.bit,
+                        source: 'BBAX',
+                        postedAt: null,
+                        eventName: `${combo.eventType} (${combo.season})`,
+                        rawText: `${combo.blade} ${combo.ratchet || ''} ${combo.bit}`.trim(),
+                        season: combo.season
+                    });
+                } catch (error) {
+                    console.error(`Failed on BBAX combo: ${JSON.stringify(combo)} — ${error.message}`);
+                }
+            }
+
+            await env.DB.prepare(`INSERT INTO processed_posts (post_id) VALUES (?)`).bind(`bbax:${eventId}`).run();
+            insertedEvents++;
+        }
+
+        return new Response(`Inserted ${insertedEvents} BBAX events`);
+    } catch (error) {
+        return new Response(`Error processing BBAX request: ${error.message}`, { status: 500 });
+    }
 }
