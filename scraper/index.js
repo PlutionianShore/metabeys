@@ -457,10 +457,12 @@ function standardizePartName(raw) {
 }
 
 
-async function insertCombo(env, { bladeToken, bladeParts, isCX, ratchet, bit, source, postedAt, eventName, rawText }) {
+async function insertCombo(env, { bladeToken, bladeParts, isCX, ratchet, bit, source, postedAt, eventName, rawText, season }) {
     /*trying this as a way to split up handle submit cause rn it would only do WBO */
     let bladeName = bladeToken;
     let chipCategory = null;
+    const blade = await getOrClassifyBlade(env, bladeName, isCX);
+
     const insert = await env.DB.prepare(`INSERT INTO combos (blade_id, posted_at, event_name, raw_text, source, season) VALUES (?, ?, ?, ?, ?, ?)`).bind(blade.id, postedAt, eventName, rawText, source, season).run();
     if (isCX) {
         ({ mainName: bladeName, chipCategory } = splitChipAndMain(bladeToken));
@@ -469,13 +471,6 @@ async function insertCombo(env, { bladeToken, bladeParts, isCX, ratchet, bit, so
     if (IGNORED.includes(bladeName)) {
         throw new Error(`blade name "${bladeName}" ignored`);
     }
-
-    const blade = await getOrClassifyBlade(env, bladeName, isCX);
-
-    const insert = await env.DB.prepare(
-        `INSERT INTO combos (blade_id, posted_at, event_name, raw_text, source) VALUES (?, ?, ?, ?, ?)`
-    ).bind(blade.id, postedAt, eventName, rawText, source).run();
-    const comboId = insert.meta.last_row_id;
 
     const partsUsed = [];
     if (blade.is_cx) {
@@ -512,6 +507,7 @@ BBAX STUFF HERE:
 
 const BBAX_EVENT_COLUMNS = 5;
 const BBAX_BLOCK_SIZE = 16;
+const BBAX_COMBOS_PER_PLAYER = 4;
 
 //comverting ratchet format
 function normalizeRatchet(raw) {
@@ -557,22 +553,14 @@ function parseBbaxRow(cells) {
     for (let p = 0; p < 3; p++) {
         const base = BBAX_EVENT_COLUMNS + p * BBAX_BLOCK_SIZE;
 
-        for (let d = 0; d < 3; d++) {
-            const deckBase = base + 1 + d * 4;
-            const blade = cleanBladeName(cells[deckBase]);
-            const ratchet = normalizeRatchet(cells[deckBase + 2]);
-            const bit = cleanBitName(cells[deckBase + 3]);
+        for (let d = 0; d < BBAX_COMBOS_PER_PLAYER; d++) {
+            const comboBase = base + 1 + d * 3;
+            const blade = cleanBladeName(cells[comboBase]);
+            const ratchet = normalizeRatchet(cells[comboBase + 1]);
+            const bit = cleanBitName(cells[comboBase + 2]);
             if (blade && bit) {
-                combos.push({ blade, ratchet, bit, season, eventType })
-            };
-        }
-
-        const sbBase = base + 1 + 12;
-        const sbBlade = cleanBladeName(cells[sbBase]);
-        const sbRatchet = normalizeRatchet(cells[sbBase + 1]);
-        const sbBit = cleanBitName(cells[sbBase + 2]);
-        if (sbBlade && sbBit) {
-            combos.push({ blade: sbBlade, ratchet: sbRatchet, bit: sbBit, season, eventType });
+                combos.push({blade, ratchet, bit, season, eventType });
+            }
         }
     }
 
