@@ -30,6 +30,8 @@ export default {
                 resp = new Response(resp.body, resp);
                 resp.headers.set("Cache-Control", "public, max-age=600");
                 ctx.waitUntil(cache.put(request, resp.clone()));
+            } else {
+                resp = new Response(resp.body, resp);
             }
             resp.headers.set("Access-Control-Allow-Origin", "*");
             return resp;
