@@ -24,11 +24,11 @@ export default {
         }
         if(url.pathname === "/stats" && request.method === "GET") {
             const cache = caches.default;
-            const resp = await handleStats(env, url);
+            let resp = await cache.match(request);
             if (!resp) {
                 resp = await handleStats(env, url);
                 resp = new Response(resp.body, resp);
-                resp.headers.set("Cache-Control", "public, max-age=600"); // 10 minutes
+                resp.headers.set("Cache-Control", "public, max-age=600");
                 ctx.waitUntil(cache.put(request, resp.clone()));
             }
             resp.headers.set("Access-Control-Allow-Origin", "*");
